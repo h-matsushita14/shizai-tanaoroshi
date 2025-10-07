@@ -28,7 +28,7 @@ function setupInventoryAppSheets() {
     },
     { 
       name: "Location_Master", 
-      headers: ["ロケーションID", "保管場所", "詳細①", "詳細②", "備考"],
+      headers: ["ロケーションID", "保管場所", "詳細①", "備考"],
       description: "棚卸ロケーション情報 (階層構造)"
     },
     { 
@@ -212,10 +212,11 @@ function getLocations() {
   const data = sheet.getDataRange().getValues();
   const headers = data.shift(); // ヘッダー行を除外
   
-  const locationNameIndex = headers.indexOf("保管場所");
-  const categoryIndex = headers.indexOf("詳細①");
+  // 「保管場所」をカテゴリ、「詳細①」をロケーション名として取得
+  const categoryIndex = headers.indexOf("保管場所");
+  const locationNameIndex = headers.indexOf("詳細①");
 
-  if (locationNameIndex === -1 || categoryIndex === -1) {
+  if (categoryIndex === -1 || locationNameIndex === -1) {
     throw new Error("必要なカラム（保管場所, 詳細①）が見つかりません。");
   }
 
@@ -226,7 +227,10 @@ function getLocations() {
     if (category && locationName) {
       const existingCategory = acc.find(item => item.category === category);
       if (existingCategory) {
-        existingCategory.locations.push(locationName);
+        // 重複を避ける
+        if (!existingCategory.locations.includes(locationName)) {
+          existingCategory.locations.push(locationName);
+        }
       } else {
         acc.push({ category: category, locations: [locationName] });
       }
