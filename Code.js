@@ -181,23 +181,41 @@ function setSummaryViewFormula(sheet) {
 const SPREADSHEET_ID = "1l7H7IusQbqPukypEoEn4tKotVR9PfGS95Yz2vuZNFNI";
 
 function doGet(e) {
+  // リクエストの内容をログに出力してデバッグしやすくする
+  Logger.log("リクエスト受信: " + JSON.stringify(e));
+
   const action = e.parameter.action;
-  let response;
+  let payload;
 
   try {
     switch (action) {
       case 'getLocations':
-        response = getLocations();
+        payload = getLocations();
         break;
       default:
-        throw new Error("サポートされていないアクションです。");
+        // actionが指定されていない、またはサポート外の場合
+        throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=getLocations)");
     }
+    
+    const response = {
+      status: 'success',
+      version: 'Code.js v4.0', // デプロイ確認用のバージョン情報
+      data: payload
+    };
+
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'success', data: response }))
+      .createTextOutput(JSON.stringify(response))
       .setMimeType(ContentService.MimeType.JSON);
+
   } catch (error) {
+    Logger.log("エラー発生: " + error.message);
+    const errorResponse = {
+      status: 'error',
+      version: 'Code.js v4.0', // エラー発生時もバージョンを返す
+      message: error.message
+    };
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
+      .createTextOutput(JSON.stringify(errorResponse))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -205,38 +223,78 @@ function doGet(e) {
 function getLocations() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Master");
-  if (!sheet) {
-    throw new Error("Location_Masterシートが見つかりません。");
-  }
-  
+  if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
+
   const data = sheet.getDataRange().getValues();
-  const headers = data.shift(); // ヘッダー行を除外
-  
-  // 「保管場所」をカテゴリ、「詳細①」をロケーション名として取得
-  const categoryIndex = headers.indexOf("保管場所");
-  const locationNameIndex = headers.indexOf("詳細①");
+  const headers = data.shift();
 
-  if (categoryIndex === -1 || locationNameIndex === -1) {
-    throw new Error("必要なカラム（保管場所, 詳細①）が見つかりません。");
+  const idIndex = headers.indexOf("ロケーションID");
+  const locationIndex = headers.indexOf("ロケーション");
+  const storageIndex = headers.indexOf("保管場所");
+  const detail1Index = headers.indexOf("詳細①");
+
+  if ([idIndex, locationIndex, storageIndex, detail1Index].includes(-1)) {
+    throw new Error("必要なカラム（ロケーションID, ロケーション, 保管場所, 詳細①）が見つかりません。");
   }
 
-  const groupedLocations = data.reduce((acc, row) => {
-    const category = row[categoryIndex];
-    const locationName = row[locationNameIndex];
-    
-    if (category && locationName) {
-      const existingCategory = acc.find(item => item.category === category);
-      if (existingCategory) {
-        // 重複を避ける
-        if (!existingCategory.locations.includes(locationName)) {
-          existingCategory.locations.push(locationName);
-        }
-      } else {
-        acc.push({ category: category, locations: [locationName] });
-      }
-    }
-    return acc;
-  }, []);
+  const hierarchy = {};
 
-  return groupedLocations;
+  // データから階層構造を構築
+  data.forEach(row => {
+    const id = row[idIndex];
+    const category = row[locationIndex];
+    const storage = row[storageIndex];
+    const detail = row[detail1Index];
+
+    if (!category || !storage) return; // カテゴリか保管場所がなければスキップ
+
+    // カテゴリ（例: 工場1F）がなければ初期化
+    if (!hierarchy[category]) {
+      hierarchy[category] = {};
+    }
+
+    // 保管場所（例: 資材室）がなければ初期化
+    if (!hierarchy[category][storage]) {
+      // 保管場所の親となる行（詳細①が空欄）を探して、そのIDを基準とする
+      const baseRow = data.find(r => r[locationIndex] === category && r[storageIndex] === storage && !r[detail1Index]);
+      hierarchy[category][storage] = {
+        id: baseRow ? baseRow[idIndex] : id, // 親のID、見つからなければ今の行のID
+        name: storage,
+        details: []
+      };
+    }
+
+    // 詳細①があれば、details配列に追加
+    if (detail) {
+      hierarchy[category][storage].details.push({ id: id, name: detail });
+    }
+  });
+
+  // 階層オブジェクトをソート可能な配列に変換
+  const result = Object.keys(hierarchy).map(categoryKey => {
+    const storageAreas = Object.values(hierarchy[categoryKey]);
+    
+    // 各保管場所内の詳細をIDでソート
+    storageAreas.forEach(area => {
+      area.details.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+    });
+
+    // 保管場所をIDでソート
+    storageAreas.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+
+    // カテゴリをソートするために、そのカテゴリ内で最小のIDを見つける
+    const minId = storageAreas.length > 0 ? storageAreas[0].id : '';
+
+    return {
+      category: categoryKey,
+      minId: minId,
+      storageAreas: storageAreas
+    };
+  })
+  .sort((a, b) => a.minId.localeCompare(b.minId, undefined, { numeric: true }));
+
+  // ソート用の一時的なminIdプロパティを削除
+  result.forEach(r => delete r.minId);
+
+  return result;
 }
