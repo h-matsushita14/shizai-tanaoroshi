@@ -83,17 +83,15 @@ function InteractiveMap({ svgPath, onAreaClick }) {
 
             // Process text elements to assign data-location-id to their parent groups
             // Process all elements with text content to assign data-location-id
-            const allTextContainingElements = svgElement.querySelectorAll('text, tspan, div, span'); // テキストを含む可能性のある要素をすべて取得
+            // SVGのtext要素とtspan要素のみを対象とする
+            const allTextContainingElements = svgElement.querySelectorAll('text, tspan'); 
             for (const element of allTextContainingElements) {
               const textContent = element.textContent.trim();
-              console.log("Processing element:", element.tagName, textContent, "Length:", textContent.length); // デバッグログ
-              console.log("  Comparing with locationMap key '段ボール①':", textContent === "段ボール①"); // デバッグログ
-              console.log("  locationMap[textContent] value:", locationMap[textContent]); // デバッグログ
-
+              // デバッグログを追加
+              console.log(`[Assign ID] Processing: ${textContent} (Tag: ${element.tagName})`);
               if (locationMap[textContent]) {
-                console.log("  Inside locationMap[textContent] block for:", textContent); // デバッグログ
                 element.dataset.locationId = locationMap[textContent];
-                console.log("  Assigned data-location-id:", element.dataset.locationId, "to", element); // デバッグログ
+                console.log(`[Assign ID] Assigned ${locationMap[textContent]} to ${textContent}`);
               }
             }
 
@@ -130,62 +128,64 @@ function InteractiveMap({ svgPath, onAreaClick }) {
 
 
             // Add click listeners to elements with data-location-id
-            const clickableElements = svgElement.querySelectorAll('[data-location-id]');
+            // SVGの図形要素とtext要素のみを対象とする
+            const clickableElements = svgElement.querySelectorAll('rect[data-location-id], path[data-location-id], circle[data-location-id], ellipse[data-location-id], polygon[data-location-id], line[data-location-id], text[data-location-id]');
             clickableElements.forEach(element => {
+              // デバッグログを追加
+              console.log(`[Clickable] Element: ${element.tagName}, Text: ${element.textContent.trim()}, ID: ${element.dataset.locationId}`);
+
               element.style.cursor = 'pointer';
               element.addEventListener('click', (event) => {
                 event.stopPropagation();
                 onAreaClick(element.dataset.locationId);
               });
 
-              // Optional: Add hover effect
-              let originalFill = ''; // 初期化
+              let originalFill = '';
+              let targetElementForHover = null; // ホバーエフェクトを適用する実際の要素
 
-              element.addEventListener('mouseenter', () => {
-                let targetShapeElement = null;
+              element.addEventListener('mouseenter', (event) => { // event引数を追加
+                event.stopPropagation(); // イベントのバブリングを抑制
 
-                // element自身が図形要素の場合
-                if (element.tagName === 'rect' || element.tagName === 'path' || element.tagName === 'circle' || element.tagName === 'ellipse' || element.tagName === 'polygon' || element.tagName === 'line') {
-                  targetShapeElement = element;
-                } else {
-                  // elementがテキスト要素の場合、その親の図形要素を探す
-                  targetShapeElement = element.closest('rect, path, circle, ellipse, polygon, line');
-                }
+                // デバッグログを追加
+                console.log(`[MouseEnter] Element: ${element.tagName}, Text: ${element.textContent.trim()}, ID: ${element.dataset.locationId}`);
 
-                // もし図形要素が見つからなければ、その親のg要素を探す
-                if (!targetShapeElement) {
-                  targetShapeElement = element.closest('g');
-                }
+                // ホバーエフェクトを適用する要素を決定
+                // element自身がdata-location-idを持つSVG図形要素またはtext要素であるため、それを直接対象とする
+                targetElementForHover = element;
 
-                console.log("MouseEnter: element:", element.tagName, element.textContent.trim()); // ★追加
-                console.log("  targetShapeElement:", targetShapeElement); // ★追加
+                // デバッグログを追加
+                console.log(`[MouseEnter] targetElementForHover: ${targetElementForHover ? targetElementForHover.tagName : 'null'}`);
 
-                if (targetShapeElement) {
-                  originalFill = targetShapeElement.style.fill; // 元のfillスタイルを保存
-                  console.log("  originalFill:", originalFill); // ★追加
-                  targetShapeElement.style.fill = '#FFD700'; // ハイライト色
+                if (targetElementForHover) {
+                  // originalFillを正確に取得: まず属性、次にスタイル、最後に計算済みスタイル
+                  // ただし、text要素の場合、fillは親のg要素から継承されることが多い
+                  // そのため、text要素の場合は親のg要素のfillを考慮する
+                  if (targetElementForHover.tagName === 'text') {
+                    const parentG = targetElementForHover.closest('g');
+                    if (parentG) {
+                      originalFill = parentG.getAttribute('fill') || parentG.style.fill || getComputedStyle(parentG).fill;
+                    } else {
+                      originalFill = targetElementForHover.getAttribute('fill') || targetElementForHover.style.fill || getComputedStyle(targetElementForHover).fill;
+                    }
+                  } else {
+                    originalFill = targetElementForHover.getAttribute('fill') || targetElementForHover.style.fill || getComputedStyle(targetElementForHover).fill;
+                  }
+                  
+                  // デバッグログを追加
+                  console.log(`[MouseEnter] originalFill: ${originalFill}`);
+                  targetElementForHover.style.fill = '#FFD700'; // ハイライト色
                 }
               });
 
-              element.addEventListener('mouseleave', () => {
-                let targetShapeElement = null;
+              element.addEventListener('mouseleave', (event) => { // event引数を追加
+                event.stopPropagation(); // イベントのバブリングを抑制
 
-                if (element.tagName === 'rect' || element.tagName === 'path' || element.tagName === 'circle' || element.tagName === 'ellipse' || element.tagName === 'polygon' || element.tagName === 'line') {
-                  targetShapeElement = element;
-                } else {
-                  targetShapeElement = element.closest('rect, path, circle, ellipse, polygon, line');
-                }
-
-                if (!targetShapeElement) {
-                  targetShapeElement = element.closest('g');
-                }
-                
-                console.log("MouseLeave: element:", element.tagName, element.textContent.trim()); // ★追加
-                console.log("  targetShapeElement:", targetShapeElement); // ★追加
-                console.log("  restoring originalFill:", originalFill); // ★追加
-
-                if (targetShapeElement) {
-                  targetShapeElement.style.fill = originalFill; // 元の色に戻す
+                // デバッグログを追加
+                console.log(`[MouseLeave] Element: ${element.tagName}, Text: ${element.textContent.trim()}, ID: ${element.dataset.locationId}`);
+                if (targetElementForHover) {
+                  targetElementForHover.style.fill = originalFill; // 元の色に戻す
+                  // デバッグログを追加
+                  console.log(`[MouseLeave] Restored fill to: ${originalFill}`);
                 }
               });
             });

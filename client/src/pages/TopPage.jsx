@@ -1,31 +1,33 @@
 import { useNavigate } from 'react-router-dom';
-import { Stack, Card, CardActionArea, Typography, Box } from '@mui/material';
+import { Stack, Card, CardActionArea, Typography, Box, useMediaQuery, useTheme, Grid } from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import SettingsIcon from '@mui/icons-material/Settings';
 
-// ... (menuItems, handleCardClick の定義は省略。変更なし) ...
-
 function TopPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ (sm 未満)
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md')); // タブレット (sm 以上 md 未満)
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md')); // PC (md 以上)
 
   const menuItems = [
     {
       title: '棚卸作業',
       description: 'ロケーションを選択し、資材の棚卸を開始します。',
-      icon: <InventoryIcon sx={{ fontSize: 70 }} color="primary" />,
+      icon: <InventoryIcon sx={{ fontSize: isMobile ? 40 : (isTablet ? 50 : 70) }} color="primary" />,
       path: '/locations',
     },
     {
       title: '棚卸記録出力',
       description: '過去の棚卸記録をCSV形式で出力します。',
-      icon: <AssessmentIcon sx={{ fontSize: 70 }} color="secondary" />,
+      icon: <AssessmentIcon sx={{ fontSize: isMobile ? 40 : (isTablet ? 50 : 70) }} color="secondary" />,
       path: '/export', // 未実装
     },
     {
       title: 'マスター登録・編集',
       description: '資材やロケーションのマスターデータを登録・編集します。',
-      icon: <SettingsIcon sx={{ fontSize: 70 }} color="info" />,
+      icon: <SettingsIcon sx={{ fontSize: isMobile ? 40 : (isTablet ? 50 : 70) }} color="info" />,
       path: '/master',
     },
   ];
@@ -39,67 +41,77 @@ function TopPage() {
   };
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-      <Stack spacing={4} sx={{ width: '100%', maxWidth: 700, margin: '0 auto' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: { xs: 2, sm: 3, md: 4 } }}>
+      <Grid
+        container
+        spacing={{ xs: 2, sm: 3, md: 4 }}
+        justifyContent="center"
+        sx={{
+          width: '100%',
+          // maxWidth を削除
+          margin: '0 auto',
+          // px を削除し、Card の padding で調整
+        }}
+      >
         {menuItems.map((item, index) => (
-          <Card key={index}>
-            <CardActionArea 
-              onClick={() => handleCardClick(item.path)}
-              // 変更点1: カード内の高さを確保するため、最小高さを設定 (例: 120px)
-              //        また、子要素を垂直方向に引き伸ばすため alignItems: 'stretch' に変更
-              sx={{ display: 'flex', p: 3, alignItems: 'stretch', minHeight: 120 }} 
+          <Grid item xs={12} sm={12} md={12} key={index} sx={{ minWidth: { xs: 280, sm: 320, md: 'auto' } }}>
+            <Card
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                width: '100%',
+                maxWidth: 'lg', // Container の maxWidth に合わせる
+                minWidth: { xs: 280, sm: 320, md: 400 },
+                boxShadow: 3,
+                transition: 'transform 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                },
+              }}
             >
-              
-              {/* アイコンBOX */}
-              <Box 
-                // 変更点2: width: 100 を削除し、flex: 1 を設定。左右の幅を 1/3 確保
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  flex: 1, // 幅の比率を 1 に設定 (全体 3 のうち 1)
-                  mr: 2,
-                  // 補足: height: '100%' は alignItems: 'stretch' のおかげで効いています
+              <CardActionArea
+                onClick={() => handleCardClick(item.path)}
+                sx={{
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: { xs: 2, sm: 3 },
                 }}
               >
-                {item.icon}
-              </Box>
+                {/* アイコン */}
+                <Box sx={{ mb: { xs: 1, sm: 2 } }}>
+                  {item.icon}
+                </Box>
 
-              {/* テキストBOX */}
-              <Box 
-                // 変更点3: flex: 2 を設定。左右の幅を 2/3 確保
-                // 変更点4: 内部を Flexbox (縦方向) に設定し、高さを 100% 使用する
-                sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  flex: 2, // 幅の比率を 2 に設定 (全体 3 のうち 2)
-                  justifyContent: 'center', // 垂直方向のコンテンツ中央揃えを維持
-                }}
-              >
                 {/* ラベル (h5) */}
-                <Typography 
-                  variant="h5" 
+                <Typography
+                  variant={isMobile ? "h6" : (isTablet ? "h5" : "h4")} // フォントサイズを調整
                   component="div"
-                  // 変更点5: flex: 1 を設定。高さの比率を 1/2 確保
-                  sx={{ flex: 1, display: 'flex', alignItems: 'flex-end' }} // テキストを下端に揃える
+                  noWrap
+                  textAlign="center"
+                  sx={{ mb: { xs: 0.5, sm: 1 } }}
                 >
                   {item.title}
                 </Typography>
-                
+
                 {/* テキスト (body1) */}
-                <Typography 
-                  variant="body1" 
+                <Typography
+                  variant={isMobile ? "body2" : (isTablet ? "body1" : "h6")} // フォントサイズを調整
                   color="text.secondary"
-                  // 変更点6: flex: 1 を設定。高さの比率を 1/2 確保
-                  sx={{ flex: 1, display: 'flex', alignItems: 'flex-start' }} // テキストを上端に揃える
+                  textAlign="center"
+                  sx={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
                 >
                   {item.description}
                 </Typography>
-              </Box>
-            </CardActionArea>
-          </Card>
+              </CardActionArea>
+            </Card>
+          </Grid>
         ))}
-      </Stack>
+      </Grid>
     </Box>
   );
 }
