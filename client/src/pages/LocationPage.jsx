@@ -46,9 +46,15 @@ function LocationPage() {
     fetchLocations();
   }, []);
 
+  useEffect(() => {
+    if (!loading && !error) {
+      console.log("Fetched data structure:", locations);
+    }
+  }, [loading, error, locations]);
+
   // Called when a storage location (e.g., "資材室") is clicked in the accordion
   const handleStorageLocationSelect = (storageName) => {
-    const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室'];
+    const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
     if (availableMaps.includes(storageName)) {
       setSelectedLocation({
         name: storageName,
@@ -62,8 +68,40 @@ function LocationPage() {
 
   // Called when an area is clicked inside the InteractiveMap
   const handleAreaClickOnMap = (areaId) => {
-    alert(`選択されたエリアのID: ${areaId}`);
-    // TODO: Fetch products for this areaId
+    // alert(`選択されたエリアのID: ${areaId}`); // デバッグ用のアラートは削除またはコメントアウト
+
+    // locationsデータからareaIdに対応するロケーションを検索
+    let foundLocation = null;
+    for (const group of locations) {
+      for (const area of group.storageAreas) {
+        // area.idがL0001やL0029のような大カテゴリのIDと一致する場合
+        if (area.id === areaId) {
+          foundLocation = {
+            name: area.name,
+            svgPath: `/floor-plans/${area.name}.svg`
+          };
+          break;
+        }
+        // area.details内の詳細ロケーションも検索
+        for (const detail of area.details) {
+          if (detail.id === areaId) {
+            foundLocation = {
+              name: detail.name,
+              // 詳細ロケーションの場合、親のstorageAreaのSVGパスを使用
+              svgPath: `/floor-plans/${area.name}.svg`
+            };
+            break;
+          }
+        }
+      }
+      if (foundLocation) break;
+    }
+
+    if (foundLocation) {
+      setSelectedLocation(foundLocation);
+    } else {
+      alert(`ロケーションID ${areaId} に対応するマップが見つかりませんでした。`);
+    }
   };
 
   return (
