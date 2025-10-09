@@ -16,7 +16,7 @@ function setupInventoryAppSheets() {
       headers: [
         "商品コード", "区分", "商品名", "社内名称", "仕入先ID", "規格", 
         "単価", "ケース入数", "バラ単位", "ロット", "ロット単位", 
-        "リードタイム (日)", "安全在庫数", "バーコード/QRコード", 
+        "リードタイム (日)", "安全在庫数", 
         "備考1", "備考2", "備考3", "最終更新日"
       ],
       description: "商品情報と発注情報（流用可能）"
@@ -34,8 +34,9 @@ function setupInventoryAppSheets() {
     { 
       name: "Inventory_Records", 
       headers: [
-        "記録日時", "商品ID", "ロケーションID", "棚卸数量", 
-        "記録時単価", // <-- 【変更点1】単価をトランザクションに固定
+        "記録日時", "商品コード", "ロケーションID", 
+        "ロット数量", "ロット単位", "バラ数量", "バラ単位", 
+        "記録時単価", 
         "担当者", "備考"
       ],
       description: "実際の棚卸記録（トランザクションデータ）"
@@ -43,7 +44,7 @@ function setupInventoryAppSheets() {
     { 
       name: "Cost_Calculation", 
       headers: [
-        "記録日時", "商品ID", "棚卸数量", "単価", "合計金額", 
+        "記録日時", "商品ID", "合計数量", "単価", "合計金額", 
         "ロケーションID", "担当者"
       ],
       formulaSheet: true,
@@ -57,6 +58,11 @@ function setupInventoryAppSheets() {
       ],
       summarySheet: true, // 新しいフラグ
       description: "ロケーションと商品名、数量を結合した全記録ビュー（棚卸ヒント用）"
+    },
+    {
+      name: "Location_Product_Mapping",
+      headers: ["ロケーションID", "商品コード"],
+      description: "ロケーションと商品の紐付け"
     }
   ];
 
@@ -106,35 +112,41 @@ function setupInventoryAppSheets() {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Cost_Calculationシートオブジェクト
  */
 function setCalculationFormulas(sheet) {
-  // Inventory_Recordsの列構成: A: 記録日時, B: 商品ID, C: ロケーションID, D: 棚卸数量, E: 記録時単価, F: 担当者
+  // Inventory_Recordsの列構成: A: 記録日時, B: 商品コード, C: ロケーションID, D: ロット数量, E: ロット単位, F: バラ数量, G: バラ単位, H: 記録時単価, I: 担当者, J: 備考
+  // Product_Masterの列構成: A: 商品コード, ..., H: ケース入数
   
-  // A: 記録日時 (A2:A)
+  // A: 記録日時 (A2:A) - Inventory_RecordsのA列
   const timestampFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!A2:A),, Inventory_Records!A2:A))';
   sheet.getRange("A2").setFormula(timestampFormula);
   
-  // B: 商品ID (B2:B)
+  // B: 商品ID (B2:B) - Inventory_RecordsのB列 (商品コード)
   const productIdFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!B2:B),, Inventory_Records!B2:B))';
   sheet.getRange("B2").setFormula(productIdFormula);
 
-  // C: 棚卸数量 (C2:C) (Inventory_RecordsのD列を参照)
-  const quantityFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!D2:D),, Inventory_Records!D2:D))';
-  sheet.getRange("C2").setFormula(quantityFormula);
+  // C: 合計数量 (C2:C) - (ロット数量 * ケース入数) + バラ数量
+  // Inventory_Records!D2:D (ロット数量), Inventory_Records!F2:F (バラ数量)
+  // Product_Masterからケース入数をVLOOKUP (Product_Master!A:H の8列目)
+  const totalQuantityFormula = 
+    '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!B2:B),, ' +
+      '(N(Inventory_Records!D2:D) * IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:H, 8, FALSE), 0)) + ' +
+      'N(Inventory_Records!F2:F)' +
+    '))';
+  sheet.getRange("C2").setFormula(totalQuantityFormula);
 
-  // D: 単価 (D2:D) (Inventory_RecordsのE列、すなわち記録時単価を参照)
-  // 【変更点2】VLOOKUPから、Inventory_RecordsのE列（記録時単価）の直接参照に変更
-  const unitCostFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!E2:E),, Inventory_Records!E2:E))';
+  // D: 単価 (D2:D) - Inventory_RecordsのH列 (記録時単価)
+  const unitCostFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!H2:H),, Inventory_Records!H2:H))';
   sheet.getRange("D2").setFormula(unitCostFormula);
   
-  // E: 合計金額 (棚卸数量 * 単価) (E2:E)
+  // E: 合計金額 (E2:E) - 合計数量 * 単価
   const totalValueFormula = '=ARRAYFORMULA(IF(ISBLANK(C2:C),, C2:C * D2:D))';
   sheet.getRange("E2").setFormula(totalValueFormula);
 
-  // F: ロケーションID (F2:F) (参照用) (Inventory_RecordsのC列を参照)
+  // F: ロケーションID (F2:F) - Inventory_RecordsのC列
   const locationIdFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!C2:C),, Inventory_Records!C2:C))';
   sheet.getRange("F2").setFormula(locationIdFormula);
   
-  // G: 担当者 (G2:G) (参照用) (Inventory_RecordsのF列を参照)
-  const countedByFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!F2:F),, Inventory_Records!F2:F))';
+  // G: 担当者 (G2:G) - Inventory_RecordsのI列
+  const countedByFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!I2:I),, Inventory_Records!I2:I))';
   sheet.getRange("G2").setFormula(countedByFormula);
   
   // 金額列のフォーマットを調整
@@ -147,33 +159,32 @@ function setCalculationFormulas(sheet) {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Stock_Summaryシートオブジェクト
  */
 function setSummaryViewFormula(sheet) {
-  // Inventory_Records (A: 記録日時, B: 商品ID, C: ロケーションID, D: 棚卸数量, E: 記録時単価)
-  // Product_Master (A: 商品ID, C: 商品名)
-  // Location_Master (A: ロケーションID, B: 保管場所, C: 詳細①, D: 詳細②)
+  // Inventory_Records (A: 記録日時, B: 商品コード, C: ロケーションID, D: ロット数量, E: ロット単位, F: バラ数量, G: バラ単位, H: 記録時単価)
+  // Product_Master (A: 商品コード, C: 商品名, H: ケース入数)
+  // Location_Master (A: ロケーションID, B: 保管場所, C: 詳細①, D: 備考)
   
   // QUERY関数を使って、Inventory_Recordsに、ロケーション情報と商品名を結合する
-  // 目的: ロケーション ID, 保管場所, 詳細①, 詳細②, 商品ID, 商品名, 棚卸数量, 記録日時
-  // Product_MasterのVLOOKUP参照列は商品名(C列)のインデックス3のまま
+  // 目的: ロケーション ID, 保管場所, 詳細①, 商品ID, 商品名, 棚卸数量 (合計), 記録日時
   const queryFormula = 
     '=ARRAYFORMULA(' +
       'QUERY({' +
         'Inventory_Records!C2:C, ' + // Col1: ロケーションID (Inventory)
-        'IFERROR(VLOOKUP(Inventory_Records!C2:C, Location_Master!A:D, {2, 3, 4}, FALSE), {"", "", ""}), ' + // Col2-4: 保管場所, 詳細1, 詳細2 (Location Master VLOOKUP)
-        'Inventory_Records!B2:B, ' + // Col5: 商品ID (Inventory)
-        'IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:C, 3, FALSE), ""), ' + // Col6: 商品名 (Product Master VLOOKUP)
-        'Inventory_Records!D2:D, ' + // Col7: 棚卸数量 (Inventory)
-        'Inventory_Records!A2:A ' + // Col8: 記録日時 (Inventory)
+        'IFERROR(VLOOKUP(Inventory_Records!C2:C, Location_Master!A:C, {2, 3}, FALSE), {"", ""}), ' + // Col2-3: 保管場所, 詳細1 (Location Master VLOOKUP)
+        'Inventory_Records!B2:B, ' + // Col4: 商品ID (Inventory)
+        'IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:C, 3, FALSE), ""), ' + // Col5: 商品名 (Product Master VLOOKUP)
+        '(N(Inventory_Records!D2:D) * IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:H, 8, FALSE), 0)) + N(Inventory_Records!F2:F), ' + // Col6: 棚卸数量 (合計) = (ロット数量 * ケース入数) + バラ数量
+        'Inventory_Records!A2:A ' + // Col7: 記録日時 (Inventory)
       '}, ' +
-      '"SELECT Col1, Col2, Col3, Col4, Col5, Col6, Col7, Col8 WHERE Col1 IS NOT NULL ORDER BY Col8 DESC", 0)' +
+      '"SELECT Col1, Col2, Col3, Col4, Col5, Col6, Col7 WHERE Col1 IS NOT NULL ORDER BY Col7 DESC", 0)' +
     ')';
 
   sheet.getRange("A2").setFormula(queryFormula);
   
   // 日時列のフォーマットを調整
-  sheet.getRange("H:H").setNumberFormat("yyyy/MM/dd HH:mm");
+  sheet.getRange("G:G").setNumberFormat("yyyy/MM/dd HH:mm"); // 日時列がG列に移動
   
   // 列幅を再調整
-  sheet.autoResizeColumns(1, 8);
+  sheet.autoResizeColumns(1, 7); // 列数が7に減少
 }
 
 // --- ここからAPI用のコードを追加 ---
@@ -182,7 +193,7 @@ const SPREADSHEET_ID = "1l7H7IusQbqPukypEoEn4tKotVR9PfGS95Yz2vuZNFNI";
 
 function doGet(e) {
   // リクエストの内容をログに出力してデバッグしやすくする
-  Logger.log("リクエスト受信: " + JSON.stringify(e));
+  Logger.log("リクエスト受信 (GET): " + JSON.stringify(e));
 
   const action = e.parameter.action;
   let payload;
@@ -191,6 +202,9 @@ function doGet(e) {
     switch (action) {
       case 'getLocations':
         payload = getLocations();
+        break;
+      case 'getProducts':
+        payload = getProducts();
         break;
       default:
         // actionが指定されていない、またはサポート外の場合
@@ -208,7 +222,7 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    Logger.log("エラー発生: " + error.message);
+    Logger.log("エラー発生 (GET): " + error.message);
     const errorResponse = {
       status: 'error',
       version: 'Code.js v4.0', // エラー発生時もバージョンを返す
@@ -218,6 +232,200 @@ function doGet(e) {
       .createTextOutput(JSON.stringify(errorResponse))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function doPost(e) {
+  Logger.log("リクエスト受信 (POST): " + JSON.stringify(e));
+
+  const action = e.parameter.action;
+  let payload;
+
+  try {
+    const requestBody = JSON.parse(e.postData.contents);
+
+    switch (action) {
+      case 'addProduct':
+        payload = addProduct(requestBody);
+        break;
+      case 'editProduct':
+        payload = editProduct(requestBody);
+        break;
+      case 'deleteProduct':
+        payload = deleteProduct(requestBody);
+        break;
+      default:
+        throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=addProduct)");
+    }
+
+    const response = {
+      status: 'success',
+      version: 'Code.js v4.0',
+      data: payload
+    };
+
+    return ContentService
+      .createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    Logger.log("エラー発生 (POST): " + error.message);
+    const errorResponse = {
+      status: 'error',
+      version: 'Code.js v4.0',
+      message: error.message
+    };
+    return ContentService
+      .createTextOutput(JSON.stringify(errorResponse))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function addProduct(productData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Product_Master");
+  if (!sheet) throw new Error("Product_Masterシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getDataRange().getValues();
+  const productCodeIndex = headers.indexOf("商品コード");
+
+  if (productCodeIndex === -1) {
+    throw new Error("Product_Masterシートに'商品コード'カラムが見つかりません。");
+  }
+
+  // 「商品コード」の一意性をチェック
+  const existingProduct = data.find(row => row[productCodeIndex] === productData["商品コード"]);
+  if (existingProduct) {
+    throw new Error(`商品コード '${productData["商品コード"]}' は既に存在します。`);
+  }
+
+  const newRow = [];
+
+  // ヘッダーの順序に従ってデータを整形
+  headers.forEach(header => {
+    if (header === "最終更新日") {
+      newRow.push(new Date()); // 最終更新日を自動設定
+    } else if (productData[header] !== undefined) {
+      newRow.push(productData[header]);
+    } else {
+      newRow.push(""); // データがない場合は空欄
+    }
+  });
+
+  sheet.appendRow(newRow);
+  return { message: "商品が正常に追加されました。", product: productData };
+}
+
+function editProduct(productData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Product_Master");
+  if (!sheet) throw new Error("Product_Masterシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getDataRange().getValues();
+  const productCodeIndex = headers.indexOf("商品コード");
+
+  if (productCodeIndex === -1) {
+    throw new Error("Product_Masterシートに'商品コード'カラムが見つかりません。");
+  }
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) { // ヘッダー行をスキップ
+    if (data[i][productCodeIndex] === productData["商品コード"]) {
+      rowIndex = i + 1; // スプレッドシートの行番号は1から始まる
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`商品コード '${productData["商品コード"]}' の商品が見つかりません。`);
+  }
+
+  const updatedRow = [];
+  headers.forEach((header, index) => {
+    if (header === "最終更新日") {
+      updatedRow.push(new Date()); // 最終更新日を自動設定
+    } else if (productData[header] !== undefined) {
+      updatedRow.push(productData[header]);
+    } else {
+      updatedRow.push(data[rowIndex - 1][index]); // 既存の値を保持
+    }
+  });
+
+  sheet.getRange(rowIndex, 1, 1, updatedRow.length).setValues([updatedRow]);
+  return { message: "商品が正常に更新されました。", product: productData };
+}
+
+function deleteProduct(productData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Product_Master");
+  if (!sheet) throw new Error("Product_Masterシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getDataRange().getValues();
+  const productCodeIndex = headers.indexOf("商品コード");
+
+  if (productCodeIndex === -1) {
+    throw new Error("Product_Masterシートに'商品コード'カラムが見つかりません。");
+  }
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) { // ヘッダー行をスキップ
+    if (data[i][productCodeIndex] === productData["商品コード"]) {
+      rowIndex = i + 1; // スプレッドシートの行番号は1から始まる
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`商品コード '${productData["商品コード"]}' の商品が見つかりません。`);
+  }
+
+  sheet.deleteRow(rowIndex);
+  return { message: "商品が正常に削除されました。", productCode: productData["商品コード"] };
+}
+
+function getProducts() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const productSheet = ss.getSheetByName("Product_Master");
+  if (!productSheet) throw new Error("Product_Masterシートが見つかりません。");
+
+  const supplierSheet = ss.getSheetByName("Supplier_Master");
+  if (!supplierSheet) throw new Error("Supplier_Masterシートが見つかりません。");
+
+  const productData = productSheet.getDataRange().getValues();
+  const productHeaders = productData.shift(); // ヘッダー行を削除
+
+  const supplierData = supplierSheet.getDataRange().getValues();
+  const supplierHeaders = supplierData.shift(); // ヘッダー行を削除
+
+  const supplierIdIndex = supplierHeaders.indexOf("仕入先ID");
+  const supplierNameIndex = supplierHeaders.indexOf("仕入先名");
+
+  if (supplierIdIndex === -1 || supplierNameIndex === -1) {
+    throw new Error("Supplier_Masterシートに必要なカラム（仕入先ID, 仕入先名）が見つかりません。");
+  }
+
+  // 仕入先マスターをマップに変換して検索を高速化
+  const supplierMap = new Map();
+  supplierData.forEach(row => {
+    supplierMap.set(row[supplierIdIndex], row[supplierNameIndex]);
+  });
+
+  const products = productData.map(row => {
+    const product = {};
+    productHeaders.forEach((header, index) => {
+      product[header] = row[index];
+    });
+
+    // 仕入先IDから仕入先名を取得して追加
+    const supplierId = product["仕入先ID"];
+    product["仕入先名"] = supplierMap.get(supplierId) || ''; // 見つからない場合は空文字列
+
+    return product;
+  });
+
+  return products;
 }
 
 function getLocations() {

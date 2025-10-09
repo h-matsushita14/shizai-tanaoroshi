@@ -17,8 +17,23 @@ function InteractiveMap({ svgPath, onAreaClick }) {
           if (svgElement) {
             console.log("SVG Element DOM structure:", svgElement.outerHTML); // ★追加
             // Make it responsive
-            svgElement.style.width = '100%';
-            svgElement.style.height = 'auto';
+            svgElement.style.maxWidth = '100%';
+            svgElement.style.maxHeight = '100%';
+
+            // Remove the title text element from the SVG
+            const mapName = svgPath.split('/').pop().replace('.svg', '');
+            const allTextElements = svgElement.querySelectorAll('text');
+            allTextElements.forEach(textEl => {
+              if (textEl.textContent.trim() === mapName) {
+                const parentGroup = textEl.closest('g');
+                // If it's in a group, remove the group. Otherwise, remove the text element itself.
+                if (parentGroup) {
+                  parentGroup.remove();
+                } else {
+                  textEl.remove();
+                }
+              }
+            });
 
             // Define the mapping from SVG text content to location IDs
             const locationMap = {
@@ -200,7 +215,18 @@ function InteractiveMap({ svgPath, onAreaClick }) {
 
   }, [svgPath, onAreaClick]);
 
-  return <Box ref={svgContainerRef} sx={{ maxWidth: '800px', margin: 'auto' }} />;
+  return (
+    <Box 
+      ref={svgContainerRef} 
+      sx={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+      }} 
+    />
+  );
 }
 
 export default InteractiveMap;

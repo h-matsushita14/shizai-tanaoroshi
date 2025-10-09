@@ -5,12 +5,14 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // ArrowBackIcon を�
 import TopPage from './pages/TopPage';
 import LocationPage from './pages/LocationPage';
 import MasterEditPage from './pages/MasterEditPage';
+import ProductMasterPage from './pages/ProductMasterPage';
 
 // パスとページ名のマッピング
 const pageTitles = {
   '/': 'トップページ',
   '/locations': 'ロケーション選択',
   '/master': 'マスター登録・編集',
+  '/master/products': '商品マスター',
   // 必要に応じて他のパスも追加
 };
 
@@ -87,6 +89,7 @@ function App() {
           <Route path="/" element={<TopPage />} />
           <Route path="/locations" element={<LocationPage />} />
           <Route path="/master" element={<MasterEditPage />} />
+          <Route path="/master/products" element={<ProductMasterPage />} />
         </Routes>
       </Container>
     </Box>

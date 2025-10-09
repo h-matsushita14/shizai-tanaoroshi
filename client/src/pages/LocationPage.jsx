@@ -3,7 +3,8 @@ import {
   Typography, Box, List, ListItemButton, ListItemText, CircularProgress,
   Alert, Drawer, Divider, Toolbar,
   Accordion, AccordionSummary, AccordionDetails,
-  useMediaQuery, useTheme, FormControl, InputLabel, Select, MenuItem // 新しくインポート
+  useMediaQuery, useTheme, FormControl, InputLabel, Select, MenuItem,
+  AppBar, Button // 新しくインポート
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InteractiveMap from '../components/InteractiveMap';
@@ -65,9 +66,13 @@ function LocationPage() {
 
   // selectedCategory が変更されたら selectedStorageArea をリセット
   useEffect(() => {
-    setSelectedStorageArea('');
-    setSelectedLocation(null);
-  }, [selectedCategory]);
+    // This effect is mainly for the mobile view with dropdowns.
+    // For the footer button UI, the reset is handled in the onClick.
+    if (!isDesktop) {
+        setSelectedStorageArea('');
+        setSelectedLocation(null);
+    }
+  }, [selectedCategory, isDesktop]);
 
   useEffect(() => {
     if (!loading && !error) {
@@ -94,39 +99,35 @@ function LocationPage() {
 
   // Called when an area is clicked inside the InteractiveMap
   const handleAreaClickOnMap = (areaId) => {
-    // alert(`選択されたエリアのID: ${areaId}`); // デバッグ用のアラートは削除またはコメントアウト
+    let targetStorageArea = null;
+    let parentCategory = null;
 
-    // locationsデータからareaIdに対応するロケーションを検索
-    let foundLocation = null;
+    // Find the storage area that corresponds to the clicked ID.
     for (const group of locations) {
       for (const area of group.storageAreas) {
-        // area.idがL0001やL0029のような大カテゴリのIDと一致する場合
         if (area.id === areaId) {
-          foundLocation = {
-            name: area.name,
-            svgPath: `/floor-plans/${area.name}.svg`
-          };
+          targetStorageArea = area;
+          parentCategory = group.category;
           break;
         }
-        // area.details内の詳細ロケーションも検索
-        for (const detail of area.details) {
-          if (detail.id === areaId) {
-            foundLocation = {
-              name: detail.name,
-              // 詳細ロケーションの場合、親のstorageAreaのSVGパスを使用
-              svgPath: `/floor-plans/${area.name}.svg`
-            };
-            break;
-          }
-        }
       }
-      if (foundLocation) break;
+      if (targetStorageArea) break;
     }
 
-    if (foundLocation) {
-      setSelectedLocation(foundLocation);
+    if (targetStorageArea && parentCategory) {
+      const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
+      if (availableMaps.includes(targetStorageArea.name)) {
+        setSelectedLocation({
+          name: targetStorageArea.name,
+          svgPath: `/floor-plans/${targetStorageArea.name}.svg`
+        });
+        setSelectedCategory(parentCategory);
+        setSelectedStorageArea(targetStorageArea.name);
+      } else {
+        alert(`${targetStorageArea.name} の見取り図はまだありません。`);
+      }
     } else {
-      alert(`ロケーションID ${areaId} に対応するマップが見つかりませんでした。`);
+      console.log(`No direct map switch for areaId: ${areaId}`);
     }
   };
 
@@ -243,15 +244,11 @@ function LocationPage() {
               flexGrow: 1,
               bgcolor: 'background.default',
               p: 3,
-              ml: `${drawerWidth}px`,
-              width: `calc(100% - ${drawerWidth}px)`,
-              mt: totalFixedHeaderHeight, // メインコンテンツも固定ヘッダーの下に配置
+              mt: totalFixedHeaderHeight,
+              height: `calc(100vh - ${totalFixedHeaderHeight})`,
+              boxSizing: 'border-box',
             }}
           >
-            <Toolbar />
-            <Typography variant="h6" noWrap component="div" sx={{ mb: 2 }}>
-              {selectedLocation ? selectedLocation.name : 'ロケーションを選択'}
-            </Typography>
             {selectedLocation ? (
               <InteractiveMap
                 key={selectedLocation.svgPath}
@@ -265,97 +262,99 @@ function LocationPage() {
         </>
       ) : (
         // タブレット・スマホ用レイアウト
-        <Box sx={{ flexGrow: 1, mt: totalFixedHeaderHeight }}> {/* メインコンテンツも固定ヘッダーの下に配置 */}
-          <Toolbar /> {/* AppBar の高さ分のスペースを確保 */}
-          <Box sx={{ p: 2, display: 'flex', gap: 2, flexDirection: 'column' }}>
-            {/* ロケーション選択プルダウン */}
-            <FormControl fullWidth>
-              <InputLabel id="category-select-label">ロケーション</InputLabel>
-              <Select
-                labelId="category-select-label"
-                id="category-select"
-                value={selectedCategory}
-                label="ロケーション"
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setSelectedStorageArea(''); // カテゴリ変更で保管場所をリセット
-                  setSelectedLocation(null); // マップもリセット
-                }}
-              >
-                <MenuItem value="">
-                  <em>選択してください</em>
-                </MenuItem>
-                {locations.map((group) => (
-                  <MenuItem key={group.category} value={group.category}>
-                    {group.category}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* 保管場所選択プルダウン */}
-            <FormControl fullWidth disabled={!selectedCategory}>
-              <InputLabel id="storage-area-select-label">保管場所</InputLabel>
-              <Select
-                labelId="storage-area-select-label"
-                id="storage-area-select"
-                value={selectedStorageArea}
-                label="保管場所"
-                onChange={(e) => {
-                  setSelectedStorageArea(e.target.value);
-                  // 選択された保管場所に基づいてマップを表示
-                  const selectedArea = locations
-                    .find(group => group.category === selectedCategory)?.storageAreas
-                    .find(area => area.name === e.target.value);
-                  if (selectedArea) {
-                    setSelectedLocation({
-                      name: selectedArea.name,
-                      svgPath: `/floor-plans/${selectedArea.name}.svg`
-                    });
-                  } else {
-                    setSelectedLocation(null);
-                  }
-                }}
-              >
-                <MenuItem value="">
-                  <em>選択してください</em>
-                </MenuItem>
-                {selectedCategory && locations
-                  .find(group => group.category === selectedCategory)?.storageAreas
-                  .map((area) => (
-                    <MenuItem key={area.id} value={area.name}>
-                      {area.name}
+        <>
+          <Box sx={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'absolute',
+            top: totalFixedHeaderHeight,
+            bottom: '56px', // Space for the footer
+            left: 0,
+            right: 0,
+          }}>
+            
+            {selectedCategory && (
+              <Box sx={{ p: 2, flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="storage-area-select-label">保管場所</InputLabel>
+                  <Select
+                    labelId="storage-area-select-label"
+                    id="storage-area-select"
+                    value={selectedStorageArea}
+                    label="保管場所"
+                    onChange={(e) => {
+                      setSelectedStorageArea(e.target.value);
+                      const selectedArea = locations
+                        .find(group => group.category === selectedCategory)?.storageAreas
+                        .find(area => area.name === e.target.value);
+                      if (selectedArea) {
+                        handleStorageLocationSelect(selectedArea.name);
+                      } else {
+                        setSelectedLocation(null);
+                      }
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>選択してください</em>
                     </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
+                    {locations
+                      .find(group => group.category === selectedCategory)?.storageAreas
+                      .map((area) => (
+                        <MenuItem key={area.id} value={area.name}>
+                          {area.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
+
+            <Box
+              component="main"
+              sx={{
+                flexGrow: 1,
+                p: 2,
+                overflowY: 'auto',
+                minHeight: 0
+              }}
+            >
+              {loading && <CircularProgress sx={{ m: 'auto' }} />}
+              {error && <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>}
+              {selectedLocation ? (
+                <InteractiveMap
+                  key={selectedLocation.svgPath}
+                  svgPath={selectedLocation.svgPath}
+                  onAreaClick={handleAreaClickOnMap}
+                />
+              ) : (
+                <Typography>
+                  {selectedCategory ? '保管場所を選択してください。' : 'まず、下のボタンからロケーションを選択してください。'}
+                </Typography>
+              )}
+            </Box>
           </Box>
 
-          {/* メインコンテンツ (マップ表示) */}
-          <Box
-            component="main"
-            sx={{
-              flexGrow: 1,
-              bgcolor: 'background.default',
-              p: 3,
-            }}
-          >
-            {loading && <CircularProgress sx={{ m: 'auto' }} />}
-            {error && <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>}
-            <Typography variant="h6" noWrap component="div" sx={{ mb: 2 }}>
-              {selectedLocation ? selectedLocation.name : 'ロケーションを選択'}
-            </Typography>
-            {selectedLocation ? (
-              <InteractiveMap
-                key={selectedLocation.svgPath}
-                svgPath={selectedLocation.svgPath}
-                onAreaClick={handleAreaClickOnMap}
-              />
-            ) : (
-              <Typography>ロケーションと保管場所を選択してください。</Typography>
-            )}
-          </Box>
-        </Box>
+          <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
+            <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto' }}>
+              {locations.map((group) => (
+                <Button
+                  key={group.category}
+                  color="inherit"
+                  onClick={() => {
+                    setSelectedCategory(group.category);
+                  }}
+                  sx={{ 
+                    flexShrink: 0, 
+                    fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
+                    borderBottom: selectedCategory === group.category ? '2px solid white' : 'none'
+                  }}
+                >
+                  {group.category}
+                </Button>
+              ))}
+            </Toolbar>
+          </AppBar>
+        </>
       )}
     </Box>
   );
