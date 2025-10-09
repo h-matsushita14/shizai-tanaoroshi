@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, MenuItem, CircularProgress, Alert } from '@mui/material';
 
-function AddProductDialog({ open, handleClose, onProductAdded }) {
+function AddProductDialog({ open, handleClose, onProductAdded, products }) {
   const [formData, setFormData] = useState({
     "商品コード": '',
     "区分": '',
@@ -34,6 +34,20 @@ function AddProductDialog({ open, handleClose, onProductAdded }) {
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
+
+    // 商品コードの必須チェック
+    if (!formData["商品コード"].trim()) {
+      setError('商品コードは必須です。');
+      setLoading(false);
+      return;
+    }
+    // 商品名の必須チェック
+    if (!formData["商品名"].trim()) {
+      setError('商品名は必須です。');
+      setLoading(false);
+      return;
+    }
+
     try {
       const scriptUrl = import.meta.env.VITE_GAS_WEB_APP_URL;
       const response = await fetch(`${scriptUrl}?action=addProduct`, {

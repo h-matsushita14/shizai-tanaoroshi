@@ -2,10 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-function EditProductDialog({ open, handleClose, product, onProductUpdated }) {
+function EditProductDialog({ open, handleClose, product, onProductUpdated, products }) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // 商品名を正規化するヘルパー関数
+  const normalizeProductName = (name) => {
+    if (!name) return '';
+    let normalized = name.replace(/株式会社/g, '')
+                         .replace(/有限会社/g, '')
+                         .replace(/合同会社/g, '')
+                         .replace(/合資会社/g, '')
+                         .replace(/合名会社/g, '')
+                         .replace(/㈱/g, '')
+                         .replace(/㈲/g, '')
+                         .replace(/㈾/g, '')
+                         .replace(/\s+/g, ''); // 全角・半角スペースを削除
+    return normalized.trim();
+  };
 
   useEffect(() => {
     if (product) {
@@ -24,6 +39,46 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated }) {
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
+
+    // 商品コードの必須チェック
+    if (!formData["商品コード"].trim()) {
+      setError('商品コードは必須です。');
+      setLoading(false);
+      return;
+    }
+    // 商品名の必須チェック
+    if (!formData["商品名"].trim()) {
+      setError('商品名は必須です。');
+      setLoading(false);
+      return;
+    }
+
+    // 完全一致の重複チェック (商品コード)
+    const exactCodeMatch = products.find(p => 
+      p["商品コード"] === formData["商品コード"] && p["商品コード"] !== product["商品コード"] // 編集中の商品自身は除外
+    );
+    if (exactCodeMatch) {
+      const confirmMessage = `商品コード「${formData["商品コード"]}」は既に登録されています。\nこのまま更新を続行しますか？`;
+      if (!window.confirm(confirmMessage)) {
+        setLoading(false);
+        return;
+      }
+    }
+
+    // あいまい一致の重複チェック (商品名)
+    const normalizedNewProductName = normalizeProductName(formData["商品名"]);
+    const ambiguousNameMatch = products.find(p => 
+      normalizeProductName(p["商品名"]) === normalizedNewProductName && p["商品コード"] !== product["商品コード"] // 編集中の商品自身は除外
+    );
+
+    if (ambiguousNameMatch) {
+      const confirmMessage = `商品名「${formData["商品名"]}」は、既存の商品「${ambiguousNameMatch["商品名"]}」と類似しています。\nこのまま更新を続行しますか？`;
+      if (!window.confirm(confirmMessage)) {
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const scriptUrl = import.meta.env.VITE_GAS_WEB_APP_URL;
       const response = await fetch(`${scriptUrl}?action=editProduct`, {
