@@ -28,7 +28,7 @@ function setupInventoryAppSheets() {
     },
     { 
       name: "Location_Master", 
-      headers: ["ロケーションID", "保管場所", "詳細①", "備考"],
+      headers: ["ロケーションID", "ロケーション", "保管場所", "詳細①", "備考"],
       description: "棚卸ロケーション情報 (階層構造)"
     },
     { 
@@ -205,6 +205,13 @@ function doGet(e) {
         break;
       case 'getProducts':
         payload = getProducts();
+        break;
+      case 'getProductsByLocation':
+        const locationId = e.parameter.locationId;
+        if (!locationId) {
+          throw new Error("'locationId'パラメータが指定されていません。");
+        }
+        payload = getProductsByLocation(locationId);
         break;
       default:
         // actionが指定されていない、またはサポート外の場合
@@ -437,51 +444,61 @@ function getLocations() {
   const headers = data.shift();
 
   const idIndex = headers.indexOf("ロケーションID");
-  const locationIndex = headers.indexOf("ロケーション");
-  const storageIndex = headers.indexOf("保管場所");
-  const detail1Index = headers.indexOf("詳細①");
+  const categoryIndex = headers.indexOf("ロケーション"); // 新しいカテゴリ列
+  const storageAreaIndex = headers.indexOf("保管場所"); // 新しい保管場所列
+  const detailIndex = headers.indexOf("詳細①"); // 新しい詳細列
 
-  if ([idIndex, locationIndex, storageIndex, detail1Index].includes(-1)) {
+  if ([idIndex, categoryIndex, storageAreaIndex, detailIndex].includes(-1)) {
     throw new Error("必要なカラム（ロケーションID, ロケーション, 保管場所, 詳細①）が見つかりません。");
   }
 
+  // ロケーションIDでデータをソート
+  data.sort((a, b) => {
+    const idA = a[idIndex];
+    const idB = b[idIndex];
+    // 数値として比較するために、必要であればパースする
+    // 例: "L0001" -> 1
+    const numA = parseInt(idA.replace(/[^0-9]/g, ''), 10);
+    const numB = parseInt(idB.replace(/[^0-9]/g, ''), 10);
+    return numA - numB;
+  });
+
   const hierarchy = {};
 
-  // データから階層構造を構築
   data.forEach(row => {
     const id = row[idIndex];
-    const category = row[locationIndex];
-    const storage = row[storageIndex];
-    const detail = row[detail1Index];
+    const category = row[categoryIndex];
+    const storageArea = row[storageAreaIndex];
+    const detail = row[detailIndex];
 
-    if (!category || !storage) return; // カテゴリか保管場所がなければスキップ
+    if (!category) return; // カテゴリがなければスキップ
 
-    // カテゴリ（例: 工場1F）がなければ初期化
     if (!hierarchy[category]) {
-      hierarchy[category] = {};
-    }
-
-    // 保管場所（例: 資材室）がなければ初期化
-    if (!hierarchy[category][storage]) {
-      // 保管場所の親となる行（詳細①が空欄）を探して、そのIDを基準とする
-      const baseRow = data.find(r => r[locationIndex] === category && r[storageIndex] === storage && !r[detail1Index]);
-      hierarchy[category][storage] = {
-        id: baseRow ? baseRow[idIndex] : id, // 親のID、見つからなければ今の行のID
-        name: storage,
-        details: []
+      hierarchy[category] = {
+        category: category,
+        storageAreas: {} // ここをオブジェクトにして、保管場所名でアクセスできるようにする
       };
     }
 
-    // 詳細①があれば、details配列に追加
-    if (detail) {
-      hierarchy[category][storage].details.push({ id: id, name: detail });
+    if (storageArea) { // 保管場所があれば
+      if (!hierarchy[category].storageAreas[storageArea]) {
+        hierarchy[category].storageAreas[storageArea] = {
+          id: id, // 保管場所のID
+          name: storageArea,
+          details: []
+        };
+      }
+
+      if (detail) { // 詳細があれば
+        hierarchy[category].storageAreas[storageArea].details.push({ id: id, name: detail });
+      }
     }
   });
 
   // 階層オブジェクトをソート可能な配列に変換
-  const result = Object.keys(hierarchy).map(categoryKey => {
-    const storageAreas = Object.values(hierarchy[categoryKey]);
-    
+  const result = Object.values(hierarchy).map(categoryGroup => {
+    const storageAreas = Object.values(categoryGroup.storageAreas);
+
     // 各保管場所内の詳細をIDでソート
     storageAreas.forEach(area => {
       area.details.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
@@ -490,19 +507,89 @@ function getLocations() {
     // 保管場所をIDでソート
     storageAreas.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 
-    // カテゴリをソートするために、そのカテゴリ内で最小のIDを見つける
-    const minId = storageAreas.length > 0 ? storageAreas[0].id : '';
-
     return {
-      category: categoryKey,
-      minId: minId,
+      category: categoryGroup.category,
       storageAreas: storageAreas
     };
-  })
-  .sort((a, b) => a.minId.localeCompare(b.minId, undefined, { numeric: true }));
+  });
 
-  // ソート用の一時的なminIdプロパティを削除
-  result.forEach(r => delete r.minId);
+  // カスタムカテゴリ順を定義
+  const customCategoryOrder = ["工場1F", "工場2F", "その他"];
+
+  // カテゴリをカスタム順でソート
+  result.sort((a, b) => {
+    const indexA = customCategoryOrder.indexOf(a.category);
+    const indexB = customCategoryOrder.indexOf(b.category);
+
+    // customCategoryOrderに含まれないカテゴリは最後に配置（または既存のlocaleCompareでソート）
+    if (indexA === -1 && indexB === -1) {
+      return a.category.localeCompare(b.category, undefined, { numeric: true });
+    }
+    if (indexA === -1) return 1; // aがカスタム順になければbより後
+    if (indexB === -1) return -1; // bがカスタム順になければaより後
+
+    return indexA - indexB;
+  });
 
   return result;
+}
+
+function getProductsByLocation(locationId) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const locationProductSheet = ss.getSheetByName("Location_Product_Mapping");
+  if (!locationProductSheet) throw new Error("Location_Product_Mappingシートが見つかりません。");
+
+  const productSheet = ss.getSheetByName("Product_Master");
+  if (!productSheet) throw new Error("Product_Masterシートが見つかりません。");
+
+  const supplierSheet = ss.getSheetByName("Supplier_Master");
+  if (!supplierSheet) throw new Error("Supplier_Masterシートが見つかりません。");
+
+  const locationProductData = locationProductSheet.getDataRange().getValues();
+  const locationProductHeaders = locationProductData.shift();
+
+  const productData = productSheet.getDataRange().getValues();
+  const productHeaders = productData.shift();
+
+  const supplierData = supplierSheet.getDataRange().getValues();
+  const supplierHeaders = supplierData.shift();
+
+  const lpLocationIdIndex = locationProductHeaders.indexOf("ロケーションID");
+  const lpProductCodeIndex = locationProductHeaders.indexOf("商品コード");
+
+  const pProductCodeIndex = productHeaders.indexOf("商品コード");
+
+  const sSupplierIdIndex = supplierHeaders.indexOf("仕入先ID");
+  const sSupplierNameIndex = supplierHeaders.indexOf("仕入先名");
+
+  if ([lpLocationIdIndex, lpProductCodeIndex, pProductCodeIndex, sSupplierIdIndex, sSupplierNameIndex].includes(-1)) {
+    throw new Error("必要なカラムがシートに見つかりません。Location_Product_Mapping: ロケーションID, 商品コード; Product_Master: 商品コード; Supplier_Master: 仕入先ID, 仕入先名");
+  }
+
+  // 仕入先マスターをマップに変換
+  const supplierMap = new Map();
+  supplierData.forEach(row => {
+    supplierMap.set(row[sSupplierIdIndex], row[sSupplierNameIndex]);
+  });
+
+  // 指定されたロケーションIDに紐づく商品コードを抽出
+  const productCodesForLocation = locationProductData
+    .filter(row => row[lpLocationIdIndex] === locationId)
+    .map(row => row[lpProductCodeIndex]);
+
+  // 商品コードに紐づく商品情報を取得
+  const products = productData
+    .filter(row => productCodesForLocation.includes(row[pProductCodeIndex]))
+    .map(row => {
+      const product = {};
+      productHeaders.forEach((header, index) => {
+        product[header] = row[index];
+      });
+      // 仕入先名を追加
+      const supplierId = product["仕入先ID"];
+      product["仕入先名"] = supplierMap.get(supplierId) || '';
+      return product;
+    });
+
+  return products;
 }

@@ -1,11 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
 
+const mapSettings = {
+  '資材室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5 }, // 上部の余白をなくし、下部に余裕を持たせる
+  '出荷準備室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5 }, // 同上
+  '第二加工室.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5 }, // 微調整
+  '段ボール倉庫.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5 }, // 上部の余白を減らす
+  '発送室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5 }, // 上部の余白をなくし、下部に余裕を持たせる
+  '包装室.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5 }, // 同上
+  // デフォルト値
+  default: { marginTop: 10, marginBottom: 10, marginLeft: 10, marginRight: 10 }
+};
+
 function InteractiveMap({ svgPath, onAreaClick }) {
   const svgContainerRef = useRef(null);
 
   useEffect(() => {
     const loadAndProcessSvg = async () => {
+      if (!svgContainerRef.current) return;
+
       try {
         const response = await fetch(svgPath);
         const svgText = await response.text();
@@ -16,7 +29,37 @@ function InteractiveMap({ svgPath, onAreaClick }) {
           const svgElement = svgContainerRef.current.querySelector('svg');
           if (svgElement) {
             console.log("SVG Element DOM structure:", svgElement.outerHTML); // ★追加
-            // Make it responsive
+
+            // SVGコンテンツの境界ボックスを取得
+            // getBBox()はSVG要素がDOMに完全にロードされてからでないと正確な値を返さない場合があるため、
+            // 少し遅延させるか、DOMContentLoadedイベントなどを待つ必要があるかもしれません。
+            // ここでは簡略化のため直接呼び出しますが、問題があれば調整が必要です。
+            const bbox = svgElement.getBBox();
+            console.log("SVG BBox:", bbox);
+            console.log("SVG clientHeight:", svgElement.clientHeight); // 追加
+            console.log("SVG scrollHeight:", svgElement.scrollHeight); // 追加
+
+            // マップごとの設定を取得
+            const currentMapFileName = svgPath.split('/').pop();
+            const settings = mapSettings[currentMapFileName] || mapSettings.default; // デフォルト設定を使用
+
+            const marginTop = settings.marginTop;
+            const marginBottom = settings.marginBottom;
+            const marginLeft = settings.marginLeft;
+            const marginRight = settings.marginRight;
+
+            const newViewBoxX = bbox.x - marginLeft;
+            const newViewBoxY = bbox.y - marginTop;
+            const newViewBoxWidth = bbox.width + marginLeft + marginRight;
+            const newViewBoxHeight = bbox.height + marginTop + marginBottom;
+
+            console.log("New viewBox values:", { newViewBoxX, newViewBoxY, newViewBoxWidth, newViewBoxHeight }); // 追加
+
+            // viewBoxを動的に設定して余白をトリミングし、マージンを追加
+            svgElement.setAttribute('viewBox', `${newViewBoxX} ${newViewBoxY} ${newViewBoxWidth} ${newViewBoxHeight}`);
+            svgElement.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+
+            // Make it responsive (これらはviewBoxとpreserveAspectRatioで制御されるため、不要になる可能性もありますが、念のため残します)
             svgElement.style.maxWidth = '100%';
             svgElement.style.maxHeight = '100%';
 
@@ -37,7 +80,7 @@ function InteractiveMap({ svgPath, onAreaClick }) {
 
             // Define the mapping from SVG text content to location IDs
             const locationMap = {
-              "資材室": "L0001", // This might need special handling if it's not a direct text element
+              "資材室": "L0001",
               "棚A": "L0002",
               "棚B": "L0003",
               "棚C": "L0004",
@@ -58,42 +101,55 @@ function InteractiveMap({ svgPath, onAreaClick }) {
               "ラック③": "L0019",
               "その他スペース①": "L0020",
               "その他スペース②": "L0021",
-              "ナルホット関連": "L0022",
-              "PC箱": "L0023",
-              "PS箱": "L0024",
-              "角煮箱": "L0025",
-              "工場1F第二加工室": "L0029", // これはメインのrect用
-              "第二加工室": "L0029", // 資材室マップ内のテキスト用
+              "その他スペース③": "L0022",
+              "その他スペース④": "L0023",
+              "工場1F出荷準備室": "L0026",
+              "出荷準備室": "L0026",
+              "ラック④": "L0027",
+              "その他スペース⑤": "L0028",
+              "工場1F第二加工室": "L0029",
+              "第二加工室": "L0029",
               "ラック⑤": "L0030",
-              "工場1F包装室": "L0048",
-              "包装室": "L0048", // ★ここを追加
-              "ラック⑥": "L0049",
-              "ラック⑦": "L0050",
-              "ラック⑧": "L0051",
-              "ラック⑨": "L0052",
               "工場1F発送室": "L0031",
-              "発送室": "L0031", // ★ここを追加
+              "発送室": "L0031",
               "棚①": "L0032",
               "棚②": "L0033",
               "棚③": "L0034",
               "作業台①": "L0035",
               "作業台②": "L0036",
-              "化粧箱置き": "L0037",
-              "工場1F出荷準備室": "L0026",
-              "出荷準備室": "L0026", // ★ここを追加
-              "ラック④": "L0027",
-              "その他スペース③": "L0028",
+              "その他スペース⑥": "L0037",
               "工場1F段ボール倉庫": "L0038",
-              "段ボール倉庫": "L0038", // ★ここを追加
-              "段ボール①": "L0039",
-              "段ボール②": "L0040",
-              "化粧箱": "L0041",
-              "保冷袋": "L0042",
-              "ビニール袋": "L0043",
-              "自販機用FP": "L0044",
-              "オガ炭": "L0045",
-              "紙袋": "L0046",
+              "段ボール倉庫": "L0038",
+              "南側": "L0039",
+              "西側": "L0040",
+              "北側": "L0041",
+              "その他スペース⑦": "L0042",
+              "東側": "L0043",
               "作業台③": "L0047",
+              "工場1F包装室": "L0048",
+              "包装室": "L0048",
+              "ラック⑥": "L0049",
+              "ラック⑦": "L0050",
+              "ラック⑧": "L0051",
+              "ラック⑨": "L0052",
+              "工場1Fサニタリー": "L0053",
+              "サニタリー": "L0053",
+              "工場1F催事倉庫": "L0054",
+              "催事倉庫": "L0054",
+              "工場2F事務所": "L0055",
+              "事務所": "L0055",
+              "工場2F書庫": "L0056",
+              "書庫": "L0056",
+              "工場2F休憩室": "L0057",
+              "休憩室": "L0057",
+              "その他プレハブ": "L0058",
+              "プレハブ": "L0058",
+              "その他コンテナ": "L0059",
+              "コンテナ": "L0059",
+              "その他ロジセン": "L0060",
+              "ロジセン": "L0060",
+              "工場1F製品冷凍庫": "L0061",
+              "製品冷凍庫": "L0061",
             };
 
             // Process text elements to assign data-location-id to their parent groups
@@ -152,6 +208,7 @@ function InteractiveMap({ svgPath, onAreaClick }) {
               element.style.cursor = 'pointer';
               element.addEventListener('click', (event) => {
                 event.stopPropagation();
+                console.log("onAreaClick called with:", element.dataset.locationId); // 追加
                 onAreaClick(element.dataset.locationId);
               });
 
@@ -217,16 +274,18 @@ function InteractiveMap({ svgPath, onAreaClick }) {
 
   return (
     <Box 
-      ref={svgContainerRef} 
-      sx={{ 
-        width: '100%', 
-        height: '100%', 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center' 
-      }} 
-    />
-  );
+            ref={svgContainerRef}
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              // justifyContent: 'center', // 中央寄せを削除
+              // alignItems: 'center' // 中央寄せを削除
+              justifyContent: 'flex-start', // 左寄せ
+              alignItems: 'flex-start', // 上寄せ
+              overflow: 'auto', // 必要に応じてスクロールバーを表示
+            }}
+          />  );
 }
 
 export default InteractiveMap;

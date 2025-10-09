@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InteractiveMap from '../components/InteractiveMap';
+import InventoryFormDialog from '../components/InventoryFormDialog'; // 追加
 
 const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
 const drawerWidth = 240; // PC/タブレットでのドロワーの幅
@@ -22,6 +23,10 @@ function LocationPage() {
   const [expandedStorageAreas, setExpandedStorageAreas] = useState({}); // 保管場所のアコーディオン展開状態
   const [selectedCategory, setSelectedCategory] = useState(''); // タブレット・スマホ用
   const [selectedStorageArea, setSelectedStorageArea] = useState(''); // タブレット・スマホ用
+
+  // 棚卸入力フォームダイアログ関連のstate
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [selectedLocationForForm, setSelectedLocationForForm] = useState(null); // ダイアログに渡すロケーション情報
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ (sm 未満)
@@ -81,16 +86,53 @@ function LocationPage() {
   }, [loading, error, locations]);
 
   // Called when a storage location (e.g., "資材室") is clicked in the accordion
-  const handleStorageLocationSelect = (storageName) => {
+  const handleStorageLocationSelect = (storageName, locationId) => {
     const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
     if (availableMaps.includes(storageName)) {
       setSelectedLocation({
         name: storageName,
         svgPath: `/floor-plans/${storageName}.svg`
       });
+      // マップ表示時はフォームを閉じる
+      setIsFormDialogOpen(false);
+      setSelectedLocationForForm(null);
     } else {
-      alert(`${storageName} の見取り図はまだありません。`);
-      setSelectedLocation(null);
+      // マップがない場合はフォームダイアログを開く
+      setSelectedLocation(null); // マップを非表示
+
+      let foundLocation = null; // 見つかったロケーションオブジェクト (area または detail)
+      let parentArea = null; // 見つかったロケーションの親の保管場所オブジェクト
+
+      // locationsデータからlocationIdに対応する保管場所または詳細を検索
+      for (const group of locations) {
+        for (const area of group.storageAreas) {
+          if (area.id === locationId) { // locationIdが保管場所のIDと一致する場合
+            foundLocation = area;
+            parentArea = area;
+            break;
+          }
+          const detail = area.details.find(d => d.id === locationId);
+          if (detail) { // locationIdが詳細のIDと一致する場合
+            foundLocation = detail;
+            parentArea = area;
+            break;
+          }
+        }
+        if (foundLocation) break;
+      }
+
+      if (foundLocation && parentArea) {
+        setSelectedLocationForForm({
+          id: locationId,
+          name: parentArea.name, // 保管場所名
+          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name // 詳細名 (保管場所自体なら空)
+        });
+        setIsFormDialogOpen(true);
+      } else {
+        console.log(`No matching location found for ID: ${locationId}`);
+        setIsFormDialogOpen(false);
+        setSelectedLocationForForm(null);
+      }
     }
     if (isMobile || isTablet) { // モバイルまたはタブレットの場合、選択後にドロワーを閉じる
       setMobileOpen(false);
@@ -99,35 +141,64 @@ function LocationPage() {
 
   // Called when an area is clicked inside the InteractiveMap
   const handleAreaClickOnMap = (areaId) => {
-    let targetStorageArea = null;
+    console.log("handleAreaClickOnMap called with:", areaId);
+    let foundLocation = null;
+    let parentArea = null;
     let parentCategory = null;
 
-    // Find the storage area that corresponds to the clicked ID.
     for (const group of locations) {
       for (const area of group.storageAreas) {
+        const detail = area.details.find(d => d.id === areaId);
+        if (detail) {
+          foundLocation = detail;
+          parentArea = area;
+          parentCategory = group.category;
+          break;
+        }
         if (area.id === areaId) {
-          targetStorageArea = area;
+          foundLocation = area;
+          parentArea = area;
           parentCategory = group.category;
           break;
         }
       }
-      if (targetStorageArea) break;
+      if (foundLocation) break;
     }
 
-    if (targetStorageArea && parentCategory) {
+    console.log("Found foundLocation:", foundLocation);
+    console.log("Found parentArea:", parentArea);
+    console.log("Found parentCategory:", parentCategory);
+
+    if (foundLocation && parentArea && parentCategory) {
       const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
-      if (availableMaps.includes(targetStorageArea.name)) {
+
+      // クリックされたのが保管場所自体で、かつマップ表示可能な場合
+      if (foundLocation.id === parentArea.id && availableMaps.includes(parentArea.name)) {
         setSelectedLocation({
-          name: targetStorageArea.name,
-          svgPath: `/floor-plans/${targetStorageArea.name}.svg`
+          name: parentArea.name,
+          svgPath: `/floor-plans/${parentArea.name}.svg`
         });
         setSelectedCategory(parentCategory);
-        setSelectedStorageArea(targetStorageArea.name);
+        setSelectedStorageArea(parentArea.name);
+        setIsFormDialogOpen(false);
+        setSelectedLocationForForm(null);
       } else {
-        alert(`${targetStorageArea.name} の見取り図はまだありません。`);
+        // 詳細なロケーションがクリックされた場合、またはマップ表示不可能な保管場所がクリックされた場合
+        // マップ表示は維持し、フォームダイアログを開く
+        setSelectedLocationForForm({
+          id: areaId,
+          name: parentArea.name,
+          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name
+        });
+        setIsFormDialogOpen(true);
+        setSelectedCategory(parentCategory);
+        setSelectedStorageArea(parentArea.name);
+        console.log("Opening form dialog for:", areaId);
       }
     } else {
-      console.log(`No direct map switch for areaId: ${areaId}`);
+      console.log(`No matching location found for areaId: ${areaId}`);
+      setIsFormDialogOpen(false);
+      setSelectedLocationForForm(null);
     }
   };
 
@@ -203,34 +274,13 @@ function LocationPage() {
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 0 }}>
                       {group.storageAreas.map((area) => (
-                        <Accordion
+                        <ListItemButton
                           key={area.id}
-                          expanded={expandedStorageAreas[area.id] || false}
-                          onChange={handleStorageAreaChange(area.id)}
-                          sx={{ boxShadow: 'none', '&:before': { display: 'none' }, pl: 2 }}
+                          onClick={() => handleStorageLocationSelect(area.name, area.id)}
+                          sx={{ pl: 4 }}
                         >
-                          <AccordionSummary
-                            expandIcon={<ExpandMoreIcon />}
-                            aria-controls={`${area.id}-content`}
-                            id={`${area.id}-header`}
-                            onClick={() => handleStorageLocationSelect(area.name)}
-                          >
-                            <Typography>{area.name}</Typography>
-                          </AccordionSummary>
-                          <AccordionDetails sx={{ p: 0 }}>
-                            <List component="div" disablePadding>
-                              {area.details.map((detail) => (
-                                <ListItemButton
-                                  key={detail.id}
-                                  onClick={() => alert(`選択されたエリア: ${detail.name} (ID: ${detail.id})`)}
-                                  sx={{ pl: 4 }}
-                                >
-                                  <ListItemText primary={detail.name} />
-                                </ListItemButton>
-                              ))}
-                            </List>
-                          </AccordionDetails>
-                        </Accordion>
+                          <ListItemText primary={area.name} />
+                        </ListItemButton>
                       ))}
                     </AccordionDetails>
                   </Accordion>
@@ -243,10 +293,11 @@ function LocationPage() {
             sx={{
               flexGrow: 1,
               bgcolor: 'background.default',
-              p: 3,
+              // p: 3, // パディングを削除
               mt: totalFixedHeaderHeight,
               height: `calc(100vh - ${totalFixedHeaderHeight})`,
               boxSizing: 'border-box',
+              overflow: 'hidden', // スクロールバーを非表示にする
             }}
           >
             {selectedLocation ? (
@@ -256,7 +307,7 @@ function LocationPage() {
                 onAreaClick={handleAreaClickOnMap}
               />
             ) : (
-              <Typography>左のリストから保管場所を選択してください。</Typography>
+              <Typography sx={{ p: 3 }}>左のリストから保管場所を選択してください。</Typography> // Typographyにはパディングを残す
             )}
           </Box>
         </>
@@ -288,7 +339,7 @@ function LocationPage() {
                         .find(group => group.category === selectedCategory)?.storageAreas
                         .find(area => area.name === e.target.value);
                       if (selectedArea) {
-                        handleStorageLocationSelect(selectedArea.name);
+                        handleStorageLocationSelect(selectedArea.name, selectedArea.id); // selectedArea.id を追加
                       } else {
                         setSelectedLocation(null);
                       }
@@ -343,8 +394,8 @@ function LocationPage() {
                   onClick={() => {
                     setSelectedCategory(group.category);
                   }}
-                  sx={{ 
-                    flexShrink: 0, 
+                  sx={{
+                    flexShrink: 0,
                     fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
                     borderBottom: selectedCategory === group.category ? '2px solid white' : 'none'
                   }}
@@ -355,6 +406,20 @@ function LocationPage() {
             </Toolbar>
           </AppBar>
         </>
+      )}
+
+      {/* InventoryFormDialog をレンダリング */}
+      {selectedLocationForForm && (
+        <InventoryFormDialog
+          open={isFormDialogOpen}
+          onClose={() => {
+            setIsFormDialogOpen(false);
+            setSelectedLocationForForm(null);
+          }}
+          locationId={selectedLocationForForm.id}
+          locationName={selectedLocationForForm.name}
+          locationDetail={selectedLocationForForm.detail}
+        />
       )}
     </Box>
   );
