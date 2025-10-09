@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Alert, TextField, Typography } from '@mui/material'; // Typography を追加
-import { DataGrid } from '@mui/x-data-grid';
+import { Box, Button, CircularProgress, Alert, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from '@mui/material'; // Table関連コンポーネントを追加
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import AddProductDialog from '../components/AddProductDialog';
