@@ -2,17 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import { Box } from '@mui/material';
 
 const mapSettings = {
-  '資材室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5 }, // 上部の余白をなくし、下部に余裕を持たせる
-  '出荷準備室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5 }, // 同上
-  '第二加工室.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5 }, // 微調整
-  '段ボール倉庫.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5 }, // 上部の余白を減らす
-  '発送室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5 }, // 上部の余白をなくし、下部に余裕を持たせる
-  '包装室.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5 }, // 同上
+  '資材室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 0, marginRight: 5, scaleFactor: 1.0 / 1.15 }, // 115%表示
+  '出荷準備室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5, scaleFactor: 1.0 }, // 同上
+  '第二加工室.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5, scaleFactor: 1.0 }, // 微調整
+  '段ボール倉庫.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5, scaleFactor: 1.0 }, // 上部の余白を減らす
+  '発送室.svg': { marginTop: 0, marginBottom: 20, marginLeft: 5, marginRight: 5, scaleFactor: 1.0 }, // 上部の余白をなくし、下部に余裕を持たせる
+  '包装室.svg': { marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5, scaleFactor: 1.0 }, // 同上
   // デフォルト値
-  default: { marginTop: 10, marginBottom: 10, marginLeft: 10, marginRight: 10 }
+  default: { marginTop: 10, marginBottom: 10, marginLeft: 10, marginRight: 10, scaleFactor: 1.0 }
 };
 
-function InteractiveMap({ svgPath, onAreaClick }) {
+function InteractiveMap({ svgPath, onAreaClick, isDesktop }) {
   const svgContainerRef = useRef(null);
 
   useEffect(() => {
@@ -43,21 +43,23 @@ function InteractiveMap({ svgPath, onAreaClick }) {
             const currentMapFileName = svgPath.split('/').pop();
             const settings = mapSettings[currentMapFileName] || mapSettings.default; // デフォルト設定を使用
 
+            // モバイル/タブレットの場合にのみ追加の余白を適用
             const marginTop = settings.marginTop;
             const marginBottom = settings.marginBottom;
             const marginLeft = settings.marginLeft;
             const marginRight = settings.marginRight;
 
-            const newViewBoxX = bbox.x - marginLeft;
-            const newViewBoxY = bbox.y - marginTop;
-            const newViewBoxWidth = bbox.width + marginLeft + marginRight;
-            const newViewBoxHeight = bbox.height + marginTop + marginBottom;
+            // モバイル/タブレットの場合にのみオフセットを適用
+            const newViewBoxX = bbox.x - marginLeft - bbox.x;
+            const newViewBoxY = bbox.y - marginTop - bbox.y;
+            const newViewBoxWidth = (bbox.width + marginLeft + marginRight) * settings.scaleFactor;
+            const newViewBoxHeight = (bbox.height + marginTop + marginBottom) * settings.scaleFactor;
 
             console.log("New viewBox values:", { newViewBoxX, newViewBoxY, newViewBoxWidth, newViewBoxHeight }); // 追加
 
             // viewBoxを動的に設定して余白をトリミングし、マージンを追加
             svgElement.setAttribute('viewBox', `${newViewBoxX} ${newViewBoxY} ${newViewBoxWidth} ${newViewBoxHeight}`);
-            svgElement.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+            svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
             // Make it responsive (これらはviewBoxとpreserveAspectRatioで制御されるため、不要になる可能性もありますが、念のため残します)
             svgElement.style.maxWidth = '100%';
@@ -281,9 +283,9 @@ function InteractiveMap({ svgPath, onAreaClick }) {
               display: 'flex',
               // justifyContent: 'center', // 中央寄せを削除
               // alignItems: 'center' // 中央寄せを削除
-              justifyContent: 'flex-start', // 左寄せ
-              alignItems: 'flex-start', // 上寄せ
-              overflow: 'auto', // 必要に応じてスクロールバーを表示
+              justifyContent: 'center', // 中央寄せ
+              alignItems: 'center', // 中央寄せ
+              overflow: 'hidden', // スクロールバーを非表示
             }}
           />  );
 }

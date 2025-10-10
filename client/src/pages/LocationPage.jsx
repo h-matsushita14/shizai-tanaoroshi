@@ -223,7 +223,9 @@ function LocationPage() {
   // AppBar の高さとページ名表示領域の高さを計算
   const appBarHeight = theme.mixins.toolbar.minHeight; // AppBar の高さ
   const pageTitleBoxHeight = 57; // App.jsx で設定したページ名表示領域の高さ (p: 1.5 と Typography h6 から概算)
-  const totalFixedHeaderHeight = `calc(${appBarHeight}px + ${pageTitleBoxHeight}px)`;
+  const desktopFixedHeaderHeight = `calc(${appBarHeight}px + ${pageTitleBoxHeight}px)`;
+  const mobileFixedHeaderHeight = `${appBarHeight}px`; // スマホ・タブレットではページタイトル領域を考慮しない
+  const effectiveFixedHeaderHeight = isDesktop ? desktopFixedHeaderHeight : mobileFixedHeaderHeight;
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -240,9 +242,8 @@ function LocationPage() {
               '& .MuiDrawer-paper': {
                 width: drawerWidth,
                 boxSizing: 'border-box',
-                mt: totalFixedHeaderHeight, // AppBar とページタイトル表示領域の合計高さ分だけ下にずらす
-                height: `calc(100vh - ${totalFixedHeaderHeight})`, // Drawer の紙の高さも調整
-                display: 'flex',
+                            mt: desktopFixedHeaderHeight, // AppBar とページタイトル表示領域の合計高さ分だけ下にずらす
+                            height: `calc(100vh - ${desktopFixedHeaderHeight})`, // Drawer の紙の高さも調整                display: 'flex',
                 flexDirection: 'column',
               },
             }}
@@ -255,37 +256,44 @@ function LocationPage() {
             </Typography>
             <Divider />
             <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
-              {loading && <CircularProgress sx={{ m: 'auto' }} />}
-              {error && <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>}
-              <div>
-                {locations.map((group) => (
-                  <Accordion
-                    key={group.category}
-                    expanded={expandedCategories[group.category] || false}
-                    onChange={handleCategoryChange(group.category)}
-                    sx={{ boxShadow: 'none', '&:before': { display: 'none' } }}
-                  >
-                    <AccordionSummary
-                      expandIcon={<ExpandMoreIcon />}
-                      aria-controls={`${group.category}-content`}
-                      id={`${group.category}-header`}
+              {loading ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', m: 'auto', p: 2 }}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ mt: 1 }}>ロケーションデータを読み込み中...</Typography>
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>
+              ) : (
+                <div>
+                  {locations.map((group) => (
+                    <Accordion
+                      key={group.category}
+                      expanded={expandedCategories[group.category] || false}
+                      onChange={handleCategoryChange(group.category)}
+                      sx={{ boxShadow: 'none', '&:before': { display: 'none' } }}
                     >
-                      <Typography>{group.category}</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ p: 0 }}>
-                      {group.storageAreas.map((area) => (
-                        <ListItemButton
-                          key={area.id}
-                          onClick={() => handleStorageLocationSelect(area.name, area.id)}
-                          sx={{ pl: 4 }}
-                        >
-                          <ListItemText primary={area.name} />
-                        </ListItemButton>
-                      ))}
-                    </AccordionDetails>
-                  </Accordion>
-                ))}
-              </div>
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        aria-controls={`${group.category}-content`}
+                        id={`${group.category}-header`}
+                      >
+                        <Typography>{group.category}</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ p: 0 }}>
+                        {group.storageAreas.map((area) => (
+                          <ListItemButton
+                            key={area.id}
+                            onClick={() => handleStorageLocationSelect(area.name, area.id)}
+                            sx={{ pl: 4 }}
+                          >
+                            <ListItemText primary={area.name} />
+                          </ListItemButton>
+                        ))}
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
+                </div>
+              )}
             </Box>
           </Drawer>
           <Box
@@ -294,8 +302,8 @@ function LocationPage() {
               flexGrow: 1,
               bgcolor: 'background.default',
               // p: 3, // パディングを削除
-              mt: totalFixedHeaderHeight,
-              height: `calc(100vh - ${totalFixedHeaderHeight})`,
+              mt: desktopFixedHeaderHeight,
+              height: `calc(100vh - ${desktopFixedHeaderHeight})`,
               boxSizing: 'border-box',
               overflow: 'hidden', // スクロールバーを非表示にする
             }}
@@ -318,14 +326,14 @@ function LocationPage() {
             display: 'flex',
             flexDirection: 'column',
             position: 'absolute',
-            top: totalFixedHeaderHeight,
+            top: effectiveFixedHeaderHeight,
             bottom: '56px', // Space for the footer
             left: 0,
             right: 0,
           }}>
             
             {selectedCategory && (
-              <Box sx={{ p: 2, flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1 }}>
+              <Box sx={{ py: 1, flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1 }}>
                 <FormControl fullWidth>
                   <InputLabel id="storage-area-select-label">保管場所</InputLabel>
                   <Select
@@ -364,29 +372,58 @@ function LocationPage() {
               component="main"
               sx={{
                 flexGrow: 1,
-                p: 2,
-                overflowY: 'auto',
+                height: '100%', // 親の高さに合わせる
+                display: 'flex', // マップを中央に配置するためにflexboxを使用
+                flexDirection: 'column', // 縦方向に要素を並べる
+                justifyContent: 'center', // 水平方向中央
+                alignItems: 'center', // 垂直方向中央
+                overflowY: 'hidden', // 垂直スクロールを禁止
+                p: 0, // パディングを削除
                 minHeight: 0
               }}
             >
-              {loading && <CircularProgress sx={{ m: 'auto' }} />}
-              {error && <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>}
-              {selectedLocation ? (
+              {loading ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 2 }}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ mt: 1 }}>ロケーションデータを読み込み中...</Typography>
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>
+              ) : selectedLocation ? (
                 <InteractiveMap
                   key={selectedLocation.svgPath}
                   svgPath={selectedLocation.svgPath}
                   onAreaClick={handleAreaClickOnMap}
+                  isDesktop={isDesktop}
                 />
               ) : (
-                <Typography>
-                  {selectedCategory ? '保管場所を選択してください。' : 'まず、下のボタンからロケーションを選択してください。'}
-                </Typography>
+                <Box sx={{ textAlign: 'center', mt: 4 }}>
+                  {selectedCategory ? (
+                    <>
+                      <Typography variant="h6" component="div">
+                        ▲
+                      </Typography>
+                      <Typography variant="h6" component="div">
+                        保管場所選択
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="h6" component="div">
+                        ロケーション選択
+                      </Typography>
+                      <Typography variant="h6" component="div">
+                        ▼
+                      </Typography>
+                    </>
+                  )}
+                </Box>
               )}
             </Box>
           </Box>
 
           <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
-            <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto' }}>
+            <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative' }}>
               {locations.map((group) => (
                 <Button
                   key={group.category}
@@ -397,10 +434,26 @@ function LocationPage() {
                   sx={{
                     flexShrink: 0,
                     fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
-                    borderBottom: selectedCategory === group.category ? '2px solid white' : 'none'
+                    borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
+                    position: 'relative', // ▼を配置するために必要
                   }}
                 >
                   {group.category}
+                  {selectedCategory === group.category && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -15, // ボタンの上に配置
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: 'white', // 見やすい色
+                        fontSize: '1.5rem',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ▼
+                    </Box>
+                  )}
                 </Button>
               ))}
             </Toolbar>

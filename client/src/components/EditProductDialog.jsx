@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert, Typography, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 function EditProductDialog({ open, handleClose, product, onProductUpdated, products }) {
@@ -148,10 +148,22 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>商品情報編集</DialogTitle>
-      <DialogContent>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                商品情報編集
+              </Typography>
+              {product && (
+                <IconButton
+                  color="error"
+                  onClick={handleDelete}
+                  sx={{ ml: 2 }} // タイトルとの間隔
+                >
+                  <DeleteIcon />
+                </IconButton>
+              )}
+            </DialogTitle>
+            <DialogContent dividers sx={{ pt: 3 }}>        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2}>
           {product && Object.keys(product).map((key) => (
             // idは表示しない、商品コードは編集不可、バーコード/QRコードは表示しない
@@ -172,21 +184,11 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} color="secondary">
+        <Button onClick={handleClose} color="inherit">
           キャンセル
         </Button>
         <Button onClick={handleSubmit} color="primary" variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={24} /> : '更新'}
-        </Button>
-        <Button
-          variant="outlined"
-          color="error"
-          startIcon={<DeleteIcon />}
-          onClick={handleDelete}
-          disabled={loading}
-          sx={{ ml: 2 }} // 左マージンを追加して他のボタンと区別
-        >
-          削除
         </Button>
       </DialogActions>
     </Dialog>

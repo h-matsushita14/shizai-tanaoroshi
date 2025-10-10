@@ -216,6 +216,9 @@ function doGet(e) {
       case 'getSuppliers': // 追加
         payload = getSuppliers();
         break;
+      case 'getLocationsMaster': // 追加
+        payload = getLocationsMaster();
+        break;
       default:
         // actionが指定されていない、またはサポート外の場合
         throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=getLocations)");
@@ -271,6 +274,21 @@ function doPost(e) {
         break;
       case 'deleteSupplier': // 追加
         payload = deleteSupplier(requestBody.supplierId); // supplierIdを直接渡す
+        break;
+      case 'addLocation': // 追加
+        payload = addLocation(requestBody);
+        break;
+      case 'editLocation': // 追加
+        payload = editLocation(requestBody);
+        break;
+      case 'deleteLocation': // 追加
+        payload = deleteLocation(requestBody.locationId);
+        break;
+      case 'addLocationProduct': // 追加
+        payload = addLocationProduct(requestBody.locationId, requestBody.productCode);
+        break;
+      case 'deleteLocationProduct': // 追加
+        payload = deleteLocationProduct(requestBody.locationId, requestBody.productCode);
         break;
       default:
         throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=addProduct)");
@@ -714,31 +732,207 @@ function editSupplier(supplierData) {
  * @param {string} supplierId - 削除する仕入れ先のID
  * @returns {Object} 削除された仕入れ先IDとメッセージ
  */
-function deleteSupplier(supplierId) {
+
+/**
+ * Location_Masterシートから全てのロケーションデータを取得する (マスター用)
+ * @returns {Array<Object>} ロケーションデータの配列
+ */
+function getLocationsMaster() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName("Supplier_Master");
-  if (!sheet) throw new Error("Supplier_Masterシートが見つかりません。");
+  const sheet = ss.getSheetByName("Location_Master");
+  if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift(); // ヘッダー行を削除
+
+  const locations = data.map(row => {
+    const location = {};
+    headers.forEach((header, index) => {
+      location[header] = row[index];
+    });
+    return location;
+  });
+  return locations;
+}
+
+/**
+ * Location_Masterシートに新しいロケーションを追加する
+ * @param {Object} locationData - 追加するロケーションデータ
+ * @returns {Object} 追加されたロケーションデータとメッセージ
+ */
+function addLocation(locationData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Location_Master");
+  if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const data = sheet.getDataRange().getValues();
-  const supplierIdIndex = headers.indexOf("仕入先ID");
+  const locationIdIndex = headers.indexOf("ロケーションID");
 
-  if (supplierIdIndex === -1) {
-    throw new Error("Supplier_Masterシートに'仕入先ID'カラムが見つかりません。");
+  if (locationIdIndex === -1) {
+    throw new Error("Location_Masterシートに'ロケーションID'カラムが見つかりません。");
+  }
+
+  // ロケーションIDの重複チェック
+  const existingLocation = data.find(row => row[locationIdIndex] === locationData["ロケーションID"]);
+  if (existingLocation) {
+    throw new Error(`ロケーションID '${locationData["ロケーションID"]}' は既に存在します。`);
+  }
+
+  const newRow = [];
+  headers.forEach(header => {
+    if (locationData[header] !== undefined) {
+      newRow.push(locationData[header]);
+    } else {
+      newRow.push(""); // データがない場合は空欄
+    }
+  });
+
+  sheet.appendRow(newRow);
+  return { message: "ロケーションが正常に追加されました。", location: locationData };
+}
+
+/**
+ * Location_Masterシートの既存のロケーションを更新する
+ * @param {Object} locationData - 更新するロケーションデータ (ロケーションIDが必須)
+ * @returns {Object} 更新されたロケーションデータとメッセージ
+ */
+function editLocation(locationData) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Location_Master");
+  if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getDataRange().getValues();
+  const locationIdIndex = headers.indexOf("ロケーションID");
+
+  if (locationIdIndex === -1) {
+    throw new Error("Location_Masterシートに'ロケーションID'カラムが見つかりません。");
   }
 
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) { // ヘッダー行をスキップ
-    if (data[i][supplierIdIndex] === supplierId) {
+    if (data[i][locationIdIndex] === locationData["ロケーションID"]) {
       rowIndex = i + 1; // スプレッドシートの行番号は1から始まる
       break;
     }
   }
 
   if (rowIndex === -1) {
-    throw new Error(`仕入先ID '${supplierId}' の仕入れ先が見つかりません。`);
+    throw new Error(`ロケーションID '${locationData["ロケーションID"]}' のロケーションが見つかりません。`);
+  }
+
+  const updatedRow = [];
+  headers.forEach((header, index) => {
+    if (locationData[header] !== undefined) {
+      updatedRow.push(locationData[header]);
+    } else {
+      updatedRow.push(data[rowIndex - 1][index]); // 既存の値を保持
+    }
+  });
+
+  sheet.getRange(rowIndex, 1, 1, updatedRow.length).setValues([updatedRow]);
+  return { message: "ロケーションが正常に更新されました。", location: locationData };
+}
+
+/**
+ * Location_Masterシートからロケーションを削除する
+ * @param {string} locationId - 削除するロケーションのID
+ * @returns {Object} 削除されたロケーションIDとメッセージ
+ */
+function deleteLocation(locationId) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Location_Master");
+  if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getDataRange().getValues();
+  const locationIdIndex = headers.indexOf("ロケーションID");
+
+  if (locationIdIndex === -1) {
+    throw new Error("Location_Masterシートに'ロケーションID'カラムが見つかりません。");
+  }
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) { // ヘッダー行をスキップ
+    if (data[i][locationIdIndex] === locationId) {
+      rowIndex = i + 1; // スプレッドシートの行番号は1から始まる
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`ロケーションID '${locationId}' のロケーションが見つかりません。`);
   }
 
   sheet.deleteRow(rowIndex);
-  return { message: "仕入れ先が正常に削除されました。", supplierId: supplierId };
+  return { message: "ロケーションが正常に削除されました。", locationId: locationId };
+}
+
+/**
+ * Location_Product_Mappingシートに商品とロケーションの紐付けを追加する
+ * @param {string} locationId - ロケーションID
+ * @param {string} productCode - 商品コード
+ * @returns {Object} メッセージ
+ */
+function addLocationProduct(locationId, productCode) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Location_Product_Mapping");
+  if (!sheet) throw new Error("Location_Product_Mappingシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const locationIdIndex = headers.indexOf("ロケーションID");
+  const productCodeIndex = headers.indexOf("商品コード");
+
+  if (locationIdIndex === -1 || productCodeIndex === -1) {
+    throw new Error("Location_Product_Mappingシートに必要なカラムが見つかりません。");
+  }
+
+  // 重複チェック
+  const data = sheet.getDataRange().getValues();
+  const isDuplicate = data.some(row => 
+    row[locationIdIndex] === locationId && row[productCodeIndex] === productCode
+  );
+  if (isDuplicate) {
+    throw new Error(`ロケーションID '${locationId}' に商品コード '${productCode}' は既に登録されています。`);
+  }
+
+  sheet.appendRow([locationId, productCode]);
+  return { message: "商品とロケーションの紐付けが正常に追加されました。" };
+}
+
+/**
+ * Location_Product_Mappingシートから商品とロケーションの紐付けを削除する
+ * @param {string} locationId - ロケーションID
+ * @param {string} productCode - 商品コード
+ * @returns {Object} メッセージ
+ */
+function deleteLocationProduct(locationId, productCode) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Location_Product_Mapping");
+  if (!sheet) throw new Error("Location_Product_Mappingシートが見つかりません。");
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const locationIdIndex = headers.indexOf("ロケーションID");
+  const productCodeIndex = headers.indexOf("商品コード");
+
+  if (locationIdIndex === -1 || productCodeIndex === -1) {
+    throw new Error("Location_Product_Mappingシートに必要なカラムが見つかりません。");
+  }
+
+  const data = sheet.getDataRange().getValues();
+  let rowIndexToDelete = -1;
+  for (let i = 1; i < data.length; i++) { // ヘッダー行をスキップ
+    if (data[i][locationIdIndex] === locationId && data[i][productCodeIndex] === productCode) {
+      rowIndexToDelete = i + 1; // スプレッドシートの行番号は1から始まる
+      break;
+    }
+  }
+
+  if (rowIndexToDelete === -1) {
+    throw new Error(`ロケーションID '${locationId}' に商品コード '${productCode}' の紐付けが見つかりません。`);
+  }
+
+  sheet.deleteRow(rowIndexToDelete);
+  return { message: "商品とロケーションの紐付けが正常に削除されました。" };
 }

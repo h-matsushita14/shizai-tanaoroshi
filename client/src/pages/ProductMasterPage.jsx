@@ -1,10 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Alert, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from '@mui/material'; // Table関連コンポーネントを追加
+import { Box, Button, CircularProgress, Alert, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TableSortLabel, FormControl, InputLabel, Select, MenuItem, useTheme, useMediaQuery, Card, CardContent, CardActions, Grid } from '@mui/material'; // Table関連コンポーネントを追加
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import AddProductDialog from '../components/AddProductDialog';
 import EditProductDialog from '../components/EditProductDialog';
 import ProductDetailsDialog from '../components/ProductDetailsDialog';
+
+// ProductCard コンポーネント
+const ProductCard = ({ product, handleViewDetails, handleEdit }) => (
+  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <CardContent sx={{ flexGrow: 1 }}>
+      <Typography variant="h6" component="div">
+        {product["商品名"]}
+      </Typography>
+      <Typography color="text.secondary">
+        商品コード: {product["商品コード"]}
+      </Typography>
+      <Typography color="text.secondary">
+        社内名称: {product["社内名称"]}
+      </Typography>
+      <Typography color="text.secondary">
+        仕入先名: {product["仕入先名"]}
+      </Typography>
+      <Typography color="text.secondary">
+        最終更新日: {product["最終更新日"] ? new Date(product["最終更新日"]).toLocaleDateString() : '-'}
+      </Typography>
+    </CardContent>
+    <CardActions>
+      <Button size="small" onClick={() => handleViewDetails(product)}>詳細</Button>
+      <Button size="small" onClick={() => handleEdit(product)}>編集</Button>
+    </CardActions>
+  </Card>
+);
 
 function ProductMasterPage() {
   const [products, setProducts] = useState([]);
@@ -16,12 +43,20 @@ function ProductMasterPage() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [supplierFilter, setSupplierFilter] = useState(''); // 仕入先名フィルターの状態
+  const [searchTerm, setSearchTerm] = useState(''); // 統合検索キーワードの状態
+  const [orderBy, setOrderBy] = useState('商品コード'); // ソート対象の列
+  const [order, setOrder] = useState('asc'); // ソート順 (asc/desc)
+  const [suppliers, setSuppliers] = useState([]); // 仕入先リストの状態
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // md以下の画面サイズでtrue
 
   // .envからGASウェブアプリのURLを取得
   const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
 
   useEffect(() => {
     fetchProducts();
+    fetchSuppliers(); // 仕入先データを取得
   }, []);
 
   const fetchProducts = async () => {
@@ -51,13 +86,66 @@ function ProductMasterPage() {
     }
   };
 
+  const fetchSuppliers = async () => {
+    try {
+      const fullUrl = `${GAS_WEB_APP_URL}?action=getSuppliers`;
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      if (result.status === 'success') {
+        setSuppliers(result.data);
+      } else {
+        console.error('Failed to fetch suppliers:', result.message);
+      }
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err);
+    }
+  };
+
   // フィルターされた商品リスト
   const filteredProducts = products.filter(product =>
-    product["仕入先名"].toLowerCase().includes(supplierFilter.toLowerCase())
+    (supplierFilter === '' || product["仕入先名"].toLowerCase() === supplierFilter.toLowerCase()) &&
+    (
+      product["商品名"].toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product["社内名称"].toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
+  // ソート処理
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const aValue = a[orderBy];
+    const bValue = b[orderBy];
+
+    // 日付の比較
+    if (orderBy === '最終更新日') {
+      const dateA = new Date(aValue);
+      const dateB = new Date(bValue);
+      if (dateA < dateB) return order === 'asc' ? -1 : 1;
+      if (dateA > dateB) return order === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    // 数値の比較 (例: 単価)
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return order === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+
+    // 文字列の比較
+    if (aValue < bValue) return order === 'asc' ? -1 : 1;
+    if (aValue > bValue) return order === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   const columns = [
-    { field: '商品コード', headerName: '商品コード', width: 120 },
+    { field: '商品コード', headerName: '商品コード', width: 150 },
     { field: '商品名', headerName: '商品名', width: 250 },
     { field: '社内名称', headerName: '社内名称', width: 150 },
     { field: '仕入先名', headerName: '仕入先名', width: 150 },
@@ -66,6 +154,7 @@ function ProductMasterPage() {
       field: 'actions',
       headerName: '操作',
       width: 250,
+      sortable: false, // ソート不可に設定
       renderCell: (params) => (
         <>
           <Button
@@ -141,36 +230,92 @@ function ProductMasterPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={handleAdd}
-        sx={{ mb: 2 }}
-      >
-        新規商品追加
-      </Button>
-      <TextField
-        label="仕入先名でフィルター"
-        variant="outlined"
-        value={supplierFilter}
-        onChange={(e) => setSupplierFilter(e.target.value)}
-        sx={{ mb: 2, width: '300px' }}
-      />
-      <div style={{ height: 600, width: '100%' }}>
-        <DataGrid
-          rows={filteredProducts}
-          columns={columns}
-          pageSizeOptions={[10, 25, 50]}
-          initialState={{
-            pagination: {
-              paginationModel: { pageSize: 10 },
-            },
-          }}
-          checkboxSelection={false}
-          disableRowSelectionOnClick
+    <Box sx={{ p: 3, overflowX: 'hidden' }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+        <FormControl sx={{ width: '200px' }}>
+          <InputLabel id="supplier-filter-label">仕入先名でフィルター</InputLabel>
+          <Select
+            labelId="supplier-filter-label"
+            value={supplierFilter}
+            label="仕入先名でフィルター"
+            onChange={(e) => setSupplierFilter(e.target.value)}
+          >
+            <MenuItem value="">すべて</MenuItem>
+            {suppliers.map((supplier) => (
+              <MenuItem key={supplier["仕入先ID"]} value={supplier["仕入先名"]}>
+                {supplier["仕入先名"]}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="商品名または社内名称で検索"
+          variant="outlined"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ width: '250px' }}
         />
-      </div>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleAdd}
+          sx={{ ml: 'auto' }}
+        >
+          {!isMobile && "新規商品追加"}
+        </Button>
+      </Box>
+      {isMobile ? (
+        <Grid container spacing={2}>
+          {sortedProducts.map((product) => (
+            <Grid item xs={12} sm={12} md={4} key={product.id}>
+              <ProductCard
+                product={product}
+                handleViewDetails={handleViewDetails}
+                handleEdit={handleEdit}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 600, overflow: 'auto' }}>
+          <Table stickyHeader aria-label="商品マスターテーブル">
+            <TableHead>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.field}
+                    sortDirection={orderBy === column.field ? order : false}
+                    style={{ minWidth: column.width }}
+                  >
+                    {column.headerName !== '操作' ? (
+                      <TableSortLabel
+                        active={orderBy === column.field}
+                        direction={orderBy === column.field ? order : 'asc'}
+                        onClick={() => handleRequestSort(column.field)}
+                      >
+                        {column.headerName}
+                      </TableSortLabel>
+                    ) : (
+                      column.headerName
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedProducts.map((product) => (
+                <TableRow hover key={product.id}>
+                  {columns.map((column) => (
+                    <TableCell key={`${product.id}-${column.field}`}>
+                      {column.renderCell ? column.renderCell({ row: product }) : product[column.field]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
       <AddProductDialog
         open={isAddDialogOpen}
         handleClose={handleCloseAddDialog}

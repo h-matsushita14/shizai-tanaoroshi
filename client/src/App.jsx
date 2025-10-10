@@ -7,6 +7,7 @@ import LocationPage from './pages/LocationPage';
 import MasterEditPage from './pages/MasterEditPage';
 import ProductMasterPage from './pages/ProductMasterPage';
 import SupplierMasterPage from './pages/SupplierMasterPage';
+import LocationMasterPage from './pages/LocationMasterPage'; // 追加
 
 // パスとページ名のマッピング
 const pageTitles = {
@@ -15,6 +16,7 @@ const pageTitles = {
   '/master': 'マスター登録・編集',
   '/master/products': '商品マスター',
   '/master/suppliers': '仕入れ先マスター',
+  '/master/locations': 'ロケーションマスター', // 追加
   // 必要に応じて他のパスも追加
 };
 
@@ -29,7 +31,7 @@ function App() {
 
   // AppBar の高さとページ名表示領域の高さを計算
   const appBarHeight = theme.mixins.toolbar.minHeight; // AppBar の高さ
-  const pageTitleBoxHeight = 57; // ページ名表示領域の Box の高さ (p: 1.5, h6, border)
+  const pageTitleBoxHeight = 57; // ページ名表示領域の Box の高さ (p: 1.5 と Typography h6 から概算)
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden' }}>
@@ -112,6 +114,7 @@ function App() {
           <Route path="/master" element={<MasterEditPage />} />
           <Route path="/master/products" element={<ProductMasterPage />} />
           <Route path="/master/suppliers" element={<SupplierMasterPage />} />
+          <Route path="/master/locations" element={<LocationMasterPage />} /> {/* 追加 */}
         </Routes>
       </Container>
     </Box>
