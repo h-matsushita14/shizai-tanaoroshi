@@ -163,6 +163,8 @@ function LocationMasterPage() {
     console.log('商品登録ボタンがクリックされました:', location);
     setSelectedLocationForProductRegistration(location);
     setIsProductRegistrationDialogOpen(true);
+    console.log('selectedLocationForProductRegistration after click:', location);
+    console.log('isProductRegistrationDialogOpen after click:', true);
   };
 
   const handleProductRegistrationDialogClose = () => {

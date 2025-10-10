@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
   Box, CircularProgress, Alert, TextField, List, ListItem, ListItemText,
-  ListItemSecondaryAction, IconButton, Divider
+  ListItemSecondaryAction, IconButton, Divider, Grid
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -12,6 +12,7 @@ const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
 function LocationProductRegistrationDialog({
   open, onClose, locationId, locationName, onProductListUpdated
 }) {
+  console.log('LocationProductRegistrationDialog rendered');
   const [allProducts, setAllProducts] = useState([]);
   const [locationProducts, setLocationProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,7 @@ function LocationProductRegistrationDialog({
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    console.log('Dialog open prop in useEffect:', open);
     if (open) {
       fetchAllProducts();
       fetchLocationProducts();
@@ -116,9 +118,14 @@ function LocationProductRegistrationDialog({
   const availableProducts = allProducts.filter(
     (product) =>
       !locationProducts.some((lp) => lp["商品コード"] === product["商品コード"]) &&
-      (product["商品コード"].toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (String(product["商品コード"]).toLowerCase().includes(searchTerm.toLowerCase()) ||
        product["商品名"].toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  console.log('Dialog loading state:', loading);
+  console.log('Dialog error state:', error);
+  console.log('allProducts:', allProducts);
+  console.log('locationProducts:', locationProducts);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
