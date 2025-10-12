@@ -1,0 +1,6 @@
+.git/
+client/node_modules/
+client/dist/
+client/package-lock.json
+package-lock.json
+UI-design/

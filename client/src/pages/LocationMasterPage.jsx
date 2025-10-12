@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, CircularProgress, Alert,
-  TextField, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Grid
+  TextField, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Grid, FormControl, InputLabel, Select, MenuItem, useTheme, useMediaQuery, Card, CardContent, CardActions
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -11,6 +11,29 @@ import LocationProductRegistrationDialog from '../components/LocationProductRegi
 
 const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
 
+const LocationCard = ({ location, handleEditClick, handleProductRegistrationClick }) => (
+  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <CardContent sx={{ flexGrow: 1 }}>
+      <Typography variant="h6" component="div">
+        {location["ロケーション"]}
+      </Typography>
+      <Typography color="text.secondary">
+        ID: {location["ロケーションID"]}
+      </Typography>
+      <Typography color="text.secondary">
+        保管場所: {location["保管場所"]}
+      </Typography>
+      <Typography color="text.secondary">
+        詳細①: {location["詳細①"]}
+      </Typography>
+    </CardContent>
+    <CardActions>
+      <Button size="small" onClick={() => handleProductRegistrationClick(location)}>商品登録</Button>
+      <Button size="small" onClick={() => handleEditClick(location)}>編集</Button>
+    </CardActions>
+  </Card>
+);
+
 function LocationMasterPage() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,11 +41,16 @@ function LocationMasterPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
   const [formData, setFormData] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [storageAreaFilter, setStorageAreaFilter] = useState('');
+  const [detailFilter, setDetailFilter] = useState('');
   const [orderBy, setOrderBy] = useState('ロケーションID');
   const [order, setOrder] = useState('asc');
   const [isProductRegistrationDialogOpen, setIsProductRegistrationDialogOpen] = useState(false);
   const [selectedLocationForProductRegistration, setSelectedLocationForProductRegistration] = useState(null);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     fetchLocations();
@@ -52,10 +80,9 @@ function LocationMasterPage() {
   };
 
   const filteredLocations = locations.filter(loc =>
-    loc["ロケーションID"].toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loc["ロケーション"].toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loc["保管場所"].toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loc["詳細①"].toLowerCase().includes(searchTerm.toLowerCase())
+    (locationFilter ? loc["ロケーション"] === locationFilter : true) &&
+    (storageAreaFilter ? loc["保管場所"] === storageAreaFilter : true) &&
+    (detailFilter ? loc["詳細①"] === detailFilter : true)
   );
 
   const handleRequestSort = (property) => {
@@ -206,23 +233,65 @@ function LocationMasterPage() {
     },
   ];
 
+  const locationOptions = [...new Set(locations.map(loc => loc['ロケーション']))];
+  const storageAreaOptions = [...new Set(locations.map(loc => loc['保管場所']))];
+  const detailOptions = [...new Set(locations.map(loc => loc['詳細①']))];
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-        <TextField
-          label="ロケーションを検索"
-          variant="outlined"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ width: '300px' }}
-        />
+    <Box sx={{ p: 3, overflowX: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2, alignItems: 'center' }}>
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>ロケーション</InputLabel>
+          <Select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            label="ロケーション"
+          >
+            <MenuItem value="">
+              <em>全て</em>
+            </MenuItem>
+            {locationOptions.map(option => (
+              <MenuItem key={option} value={option}>{option}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>保管場所</InputLabel>
+          <Select
+            value={storageAreaFilter}
+            onChange={(e) => setStorageAreaFilter(e.target.value)}
+            label="保管場所"
+          >
+            <MenuItem value="">
+              <em>全て</em>
+            </MenuItem>
+            {storageAreaOptions.map(option => (
+              <MenuItem key={option} value={option}>{option}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>詳細①</InputLabel>
+          <Select
+            value={detailFilter}
+            onChange={(e) => setDetailFilter(e.target.value)}
+            label="詳細①"
+          >
+            <MenuItem value="">
+              <em>全て</em>
+            </MenuItem>
+            {detailOptions.map(option => (
+              <MenuItem key={option} value={option}>{option}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAddClick}
           sx={{ ml: 'auto' }}
         >
-          新規ロケーション追加
+          {!isMobile && "新規ロケーション追加"}
         </Button>
       </Box>
 
@@ -233,6 +302,18 @@ function LocationMasterPage() {
         </Box>
       ) : error ? (
         <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>
+      ) : isMobile ? (
+        <Grid container spacing={2}>
+          {sortedLocations.map((location) => (
+            <Grid item xs={12} sm={12} md={4} key={location.id}>
+              <LocationCard
+                location={location}
+                handleEditClick={handleEditClick}
+                handleProductRegistrationClick={handleProductRegistrationClick}
+              />
+            </Grid>
+          ))}
+        </Grid>
       ) : (
         <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
           <Table stickyHeader aria-label="ロケーションマスターテーブル">
@@ -361,6 +442,14 @@ function LocationMasterPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <LocationProductRegistrationDialog
+        open={isProductRegistrationDialogOpen}
+        onClose={handleProductRegistrationDialogClose}
+        locationId={selectedLocationForProductRegistration?.['ロケーションID']}
+        locationName={selectedLocationForProductRegistration?.['ロケーション']}
+        onProductListUpdated={() => fetchLocations()} // ダミー関数を渡す
+      />
     </Box>
   );
 }
