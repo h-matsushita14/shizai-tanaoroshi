@@ -4,37 +4,35 @@ import {
   Alert, Drawer, Divider, Toolbar,
   Accordion, AccordionSummary, AccordionDetails,
   useMediaQuery, useTheme, FormControl, InputLabel, Select, MenuItem,
-  AppBar, Button // 新しくインポート
+  AppBar, Button
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // 追加
 import InteractiveMap from '../components/InteractiveMap';
-import InventoryFormDialog from '../components/InventoryFormDialog'; // 追加
+import InventoryFormDialog from '../components/InventoryFormDialog';
 
 const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
-const drawerWidth = 240; // PC/タブレットでのドロワーの幅
-const mobileDrawerWidth = 180; // スマホでのドロワーの幅 (必要に応じて調整)
+const drawerWidth = 240;
+const mobileDrawerWidth = 180;
 
 function LocationPage() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedLocation, setSelectedLocation] = useState(null); // For the map display
-  const [expandedCategories, setExpandedCategories] = useState({}); // カテゴリのアコーディオン展開状態
-  const [expandedStorageAreas, setExpandedStorageAreas] = useState({}); // 保管場所のアコーディオン展開状態
-  const [selectedCategory, setSelectedCategory] = useState(''); // タブレット・スマホ用
-  const [selectedStorageArea, setSelectedStorageArea] = useState(''); // タブレット・スマホ用
-
-  // 棚卸入力フォームダイアログ関連のstate
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [expandedStorageAreas, setExpandedStorageAreas] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedStorageArea, setSelectedStorageArea] = useState('');
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-  const [selectedLocationForForm, setSelectedLocationForForm] = useState(null); // ダイアログに渡すロケーション情報
+  const [selectedLocationForForm, setSelectedLocationForForm] = useState(null);
 
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ (sm 未満)
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md')); // タブレット (sm 以上 md 未満)
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md')); // PC (md 以上)
-  const [mobileOpen, setMobileOpen] = useState(false); // モバイルドロワーの開閉状態
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  // モバイルドロワーの開閉ハンドラ
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -69,10 +67,7 @@ function LocationPage() {
     fetchLocations();
   }, []);
 
-  // selectedCategory が変更されたら selectedStorageArea をリセット
   useEffect(() => {
-    // This effect is mainly for the mobile view with dropdowns.
-    // For the footer button UI, the reset is handled in the onClick.
     if (!isDesktop) {
         setSelectedStorageArea('');
         setSelectedLocation(null);
@@ -85,7 +80,6 @@ function LocationPage() {
     }
   }, [loading, error, locations]);
 
-  // Called when a storage location (e.g., "資材室") is clicked in the accordion
   const handleStorageLocationSelect = (storageName, locationId) => {
     const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
     if (availableMaps.includes(storageName)) {
@@ -93,26 +87,23 @@ function LocationPage() {
         name: storageName,
         svgPath: `/floor-plans/${storageName}.svg`
       });
-      // マップ表示時はフォームを閉じる
       setIsFormDialogOpen(false);
       setSelectedLocationForForm(null);
     } else {
-      // マップがない場合はフォームダイアログを開く
-      setSelectedLocation(null); // マップを非表示
+      setSelectedLocation(null);
 
-      let foundLocation = null; // 見つかったロケーションオブジェクト (area または detail)
-      let parentArea = null; // 見つかったロケーションの親の保管場所オブジェクト
+      let foundLocation = null;
+      let parentArea = null;
 
-      // locationsデータからlocationIdに対応する保管場所または詳細を検索
       for (const group of locations) {
         for (const area of group.storageAreas) {
-          if (area.id === locationId) { // locationIdが保管場所のIDと一致する場合
+          if (area.id === locationId) {
             foundLocation = area;
             parentArea = area;
             break;
           }
           const detail = area.details.find(d => d.id === locationId);
-          if (detail) { // locationIdが詳細のIDと一致する場合
+          if (detail) {
             foundLocation = detail;
             parentArea = area;
             break;
@@ -124,8 +115,8 @@ function LocationPage() {
       if (foundLocation && parentArea) {
         setSelectedLocationForForm({
           id: locationId,
-          name: parentArea.name, // 保管場所名
-          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name // 詳細名 (保管場所自体なら空)
+          name: parentArea.name,
+          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name
         });
         setIsFormDialogOpen(true);
       } else {
@@ -134,12 +125,11 @@ function LocationPage() {
         setSelectedLocationForForm(null);
       }
     }
-    if (isMobile || isTablet) { // モバイルまたはタブレットの場合、選択後にドロワーを閉じる
+    if (isMobile || isTablet) {
       setMobileOpen(false);
     }
   };
 
-  // Called when an area is clicked inside the InteractiveMap
   const handleAreaClickOnMap = (areaId) => {
     console.log("handleAreaClickOnMap called with:", areaId);
     let foundLocation = null;
@@ -172,7 +162,6 @@ function LocationPage() {
     if (foundLocation && parentArea && parentCategory) {
       const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
 
-      // クリックされたのが保管場所自体で、かつマップ表示可能な場合
       if (foundLocation.id === parentArea.id && availableMaps.includes(parentArea.name)) {
         setSelectedLocation({
           name: parentArea.name,
@@ -183,8 +172,6 @@ function LocationPage() {
         setIsFormDialogOpen(false);
         setSelectedLocationForForm(null);
       } else {
-        // 詳細なロケーションがクリックされた場合、またはマップ表示不可能な保管場所がクリックされた場合
-        // マップ表示は維持し、フォームダイアログを開く
         setSelectedLocationForForm({
           id: areaId,
           name: parentArea.name,
@@ -202,7 +189,6 @@ function LocationPage() {
     }
   };
 
-  // カテゴリのアコーディオン展開状態を切り替えるハンドラ
   const handleCategoryChange = (category) => (event, isExpanded) => {
     setExpandedCategories((prev) => ({
       ...prev,
@@ -210,7 +196,6 @@ function LocationPage() {
     }));
   };
 
-  // 保管場所のアコーディオン展開状態を切り替えるハンドラ
   const handleStorageAreaChange = (areaId) => (event, isExpanded) => {
     setExpandedStorageAreas((prev) => ({
       ...prev,
@@ -220,17 +205,15 @@ function LocationPage() {
 
   const currentDrawerWidth = isMobile ? mobileDrawerWidth : drawerWidth;
 
-  // AppBar の高さとページ名表示領域の高さを計算
-  const appBarHeight = theme.mixins.toolbar.minHeight; // AppBar の高さ
-  const pageTitleBoxHeight = 57; // App.jsx で設定したページ名表示領域の高さ (p: 1.5 と Typography h6 から概算)
+  const appBarHeight = theme.mixins.toolbar.minHeight;
+  const pageTitleBoxHeight = 57;
   const desktopFixedHeaderHeight = `calc(${appBarHeight}px + ${pageTitleBoxHeight}px)`;
-  const mobileFixedHeaderHeight = `${appBarHeight}px`; // スマホ・タブレットではページタイトル領域を考慮しない
+  const mobileFixedHeaderHeight = `${appBarHeight}px`;
   const effectiveFixedHeaderHeight = isDesktop ? desktopFixedHeaderHeight : mobileFixedHeaderHeight;
 
   return (
     <Box sx={{ display: 'flex' }}>
       {isDesktop ? (
-        // PC用レイアウト
         <>
           <Drawer
             variant="permanent"
@@ -242,8 +225,9 @@ function LocationPage() {
               '& .MuiDrawer-paper': {
                 width: drawerWidth,
                 boxSizing: 'border-box',
-                            mt: desktopFixedHeaderHeight, // AppBar とページタイトル表示領域の合計高さ分だけ下にずらす
-                            height: `calc(100vh - ${desktopFixedHeaderHeight})`, // Drawer の紙の高さも調整                display: 'flex',
+                mt: desktopFixedHeaderHeight,
+                height: `calc(100vh - ${desktopFixedHeaderHeight})`,
+                display: 'flex',
                 flexDirection: 'column',
               },
             }}
@@ -286,7 +270,11 @@ function LocationPage() {
                             onClick={() => handleStorageLocationSelect(area.name, area.id)}
                             sx={{ pl: 4 }}
                           >
-                            <ListItemText primary={area.name} />
+                            <ListItemText 
+                              primary={area.name} 
+                              secondary={area.inventoryStatus === 'recorded' ? '入力済み' : ''}
+                            />
+                            {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" sx={{ ml: 1 }} />}
                           </ListItemButton>
                         ))}
                       </AccordionDetails>
@@ -301,11 +289,10 @@ function LocationPage() {
             sx={{
               flexGrow: 1,
               bgcolor: 'background.default',
-              // p: 3, // パディングを削除
               mt: desktopFixedHeaderHeight,
               height: `calc(100vh - ${desktopFixedHeaderHeight})`,
               boxSizing: 'border-box',
-              overflow: 'hidden', // スクロールバーを非表示にする
+              overflow: 'hidden',
             }}
           >
             {selectedLocation ? (
@@ -315,19 +302,18 @@ function LocationPage() {
                 onAreaClick={handleAreaClickOnMap}
               />
             ) : (
-              <Typography sx={{ p: 3 }}>左のリストから保管場所を選択してください。</Typography> // Typographyにはパディングを残す
+              <Typography sx={{ p: 3 }}>左のリストから保管場所を選択してください。</Typography>
             )}
           </Box>
         </>
       ) : (
-        // タブレット・スマホ用レイアウト
         <>
           <Box sx={{ 
             display: 'flex',
             flexDirection: 'column',
             position: 'absolute',
             top: effectiveFixedHeaderHeight,
-            bottom: '56px', // Space for the footer
+            bottom: '56px',
             left: 0,
             right: 0,
           }}>
@@ -347,7 +333,7 @@ function LocationPage() {
                         .find(group => group.category === selectedCategory)?.storageAreas
                         .find(area => area.name === e.target.value);
                       if (selectedArea) {
-                        handleStorageLocationSelect(selectedArea.name, selectedArea.id); // selectedArea.id を追加
+                        handleStorageLocationSelect(selectedArea.name, selectedArea.id);
                       } else {
                         setSelectedLocation(null);
                       }
@@ -360,7 +346,10 @@ function LocationPage() {
                       .find(group => group.category === selectedCategory)?.storageAreas
                       .map((area) => (
                         <MenuItem key={area.id} value={area.name}>
-                          {area.name}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                            <Typography>{area.name}</Typography>
+                            {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" fontSize="small" />}
+                          </Box>
                         </MenuItem>
                       ))}
                   </Select>
@@ -372,13 +361,13 @@ function LocationPage() {
               component="main"
               sx={{
                 flexGrow: 1,
-                height: '100%', // 親の高さに合わせる
-                display: 'flex', // マップを中央に配置するためにflexboxを使用
-                flexDirection: 'column', // 縦方向に要素を並べる
-                justifyContent: 'center', // 水平方向中央
-                alignItems: 'center', // 垂直方向中央
-                overflowY: 'hidden', // 垂直スクロールを禁止
-                p: 0, // パディングを削除
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflowY: 'hidden',
+                p: 0,
                 minHeight: 0
               }}
             >
@@ -435,7 +424,7 @@ function LocationPage() {
                     flexShrink: 0,
                     fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
                     borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
-                    position: 'relative', // ▼を配置するために必要
+                    position: 'relative',
                   }}
                 >
                   {group.category}
@@ -443,10 +432,10 @@ function LocationPage() {
                     <Box
                       sx={{
                         position: 'absolute',
-                        top: -15, // ボタンの上に配置
+                        top: -15,
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        color: 'white', // 見やすい色
+                        color: 'white',
                         fontSize: '1.5rem',
                         lineHeight: 1,
                       }}
@@ -461,7 +450,6 @@ function LocationPage() {
         </>
       )}
 
-      {/* InventoryFormDialog をレンダリング */}
       {selectedLocationForForm && (
         <InventoryFormDialog
           open={isFormDialogOpen}

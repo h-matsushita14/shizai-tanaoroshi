@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, CircularProgress, Alert,
-  TextField, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Grid, FormControl, InputLabel, Select, MenuItem, useTheme, useMediaQuery, Card, CardContent, CardActions
+  TextField, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Grid, FormControl, InputLabel, Select, MenuItem, useTheme, useMediaQuery, Card, CardContent, CardActions, Autocomplete
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -49,8 +49,15 @@ function LocationMasterPage() {
   const [isProductRegistrationDialogOpen, setIsProductRegistrationDialogOpen] = useState(false);
   const [selectedLocationForProductRegistration, setSelectedLocationForProductRegistration] = useState(null);
 
+  const [uniqueLocations, setUniqueLocations] = useState([]);
+  const [uniqueStorageAreas, setUniqueStorageAreas] = useState([]);
+  // const [uniqueDetail1s, setUniqueDetail1s] = useState([]); // 詳細①はリスト不要のため削除
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // .envからGASウェブアプリのURLを取得
+  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
 
   useEffect(() => {
     fetchLocations();
@@ -68,6 +75,16 @@ function LocationMasterPage() {
           ...loc,
         }));
         setLocations(locationsWithId);
+
+        // ユニークなリストを作成
+        const uniqueLocs = [...new Set(result.data.map(loc => loc['ロケーション']).filter(Boolean))];
+        const uniqueAreas = [...new Set(result.data.map(loc => loc['保管場所']).filter(Boolean))];
+        // const uniqueDetails = [...new Set(result.data.map(loc => loc['詳細①']).filter(Boolean))]; // 詳細①はリスト不要のため削除
+
+        setUniqueLocations(uniqueLocs);
+        setUniqueStorageAreas(uniqueAreas);
+        // setUniqueDetail1s(uniqueDetails); // 詳細①はリスト不要のため削除
+
       } else {
         throw new Error(result.message || 'ロケーションデータの取得に失敗しました。');
       }
@@ -126,6 +143,13 @@ function LocationMasterPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleAutocompleteChange = (name, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value || '',
     }));
   };
 
@@ -200,15 +224,15 @@ function LocationMasterPage() {
   };
 
   const columns = [
-    { field: 'ロケーションID', headerName: 'ロケーションID', width: 150 },
-    { field: 'ロケーション', headerName: 'ロケーション', width: 150 },
-    { field: '保管場所', headerName: '保管場所', width: 150 },
-    { field: '詳細①', headerName: '詳細①', width: 150 },
-    { field: '備考', headerName: '備考', width: 200 },
+    { field: 'ロケーションID', headerName: 'ロケーションID', width: '10%' },
+    { field: 'ロケーション', headerName: 'ロケーション', width: '15%' },
+    { field: '保管場所', headerName: '保管場所', width: '15%' },
+    { field: '詳細①', headerName: '詳細①', width: '15%' },
+    { field: '備考', headerName: '備考', width: '20%' },
     {
       field: 'productRegistration',
       headerName: '商品登録',
-      width: 150,
+      width: '10%',
       sortable: false,
       renderCell: (params) => (
         <Button
@@ -223,7 +247,7 @@ function LocationMasterPage() {
     {
       field: 'actions',
       headerName: '操作',
-      width: 150,
+      width: '15%',
       sortable: false,
       renderCell: (params) => (
         <IconButton color="primary" onClick={() => handleEditClick(params.row)}>
@@ -284,6 +308,7 @@ function LocationMasterPage() {
               <MenuItem key={option} value={option}>{option}</MenuItem>
             ))}
           </Select>
+
         </FormControl>
         <Button
           variant="contained"
@@ -315,143 +340,155 @@ function LocationMasterPage() {
           ))}
         </Grid>
       ) : (
-        <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
-          <Table stickyHeader aria-label="ロケーションマスターテーブル">
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.field}
-                    sortDirection={orderBy === column.field ? order : false}
-                    style={{ minWidth: column.width }}
-                  >
-                    {column.headerName !== '操作' ? (
-                      <TableSortLabel
-                        active={orderBy === column.field}
-                        direction={orderBy === column.field ? order : 'asc'}
-                        onClick={() => handleRequestSort(column.field)}
-                      >
-                        {column.headerName}
-                      </TableSortLabel>
-                    ) : (
-                      column.headerName
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedLocations.map((location) => (
-                <TableRow hover key={location.id}>
-                  {columns.map((column) => (
-                    <TableCell key={`${location.id}-${column.field}`}>
-                      {column.renderCell ? column.renderCell({ row: location }) : location[column.field]}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Dialog open={openDialog} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {editingLocation ? 'ロケーションを編集' : '新規ロケーション追加'}
-          </Typography>
-          {editingLocation && (
-            <IconButton
-              color="error"
-              onClick={handleDeleteLocation}
-              sx={{ ml: 2 }}
-            >
-              <DeleteIcon />
-            </IconButton>
-          )}
-        </DialogTitle>
-        <DialogContent dividers sx={{ pt: 3 }}>
-          <Grid container spacing={2}>
-            {/* ロケーションIDは編集不可 */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="ロケーションID"
-                name="ロケーションID"
-                value={formData["ロケーションID"] || ''}
-                onChange={handleChange}
-                disabled={!!editingLocation} // 編集時はID変更不可
-                margin="dense"
-                variant="outlined"
+                <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}> {/* 変更 */}
+                  <Table stickyHeader aria-label="ロケーションマスターテーブル" sx={{ tableLayout: 'fixed', width: '100%' }}> {/* 変更 */}
+                    <TableHead>
+                      <TableRow>
+                        {columns.map((column) => (
+                          <TableCell
+                            key={column.field}
+                            sortDirection={orderBy === column.field ? order : false}
+                            style={{ width: column.width }} // minWidth から width に変更
+                          >
+                            {column.headerName !== '操作' ? (
+                              <TableSortLabel
+                                active={orderBy === column.field}
+                                direction={orderBy === column.field ? order : 'asc'}
+                                onClick={() => handleRequestSort(column.field)}
+                                sx={{ whiteSpace: 'nowrap' }}
+                              >
+                                {column.headerName}
+                              </TableSortLabel>
+                            ) : (
+                              column.headerName
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sortedLocations.map((location) => (
+                        <TableRow hover key={location.id}>
+                          {columns.map((column) => (
+                            <TableCell key={`${location.id}-${column.field}`}>
+                              {column.renderCell ? column.renderCell({ row: location }) : location[column.field]}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+        
+              <Dialog open={openDialog} onClose={handleDialogClose} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                    {editingLocation ? 'ロケーションを編集' : '新規ロケーション追加'}
+                  </Typography>
+                  {editingLocation && (
+                    <IconButton
+                      color="error"
+                      onClick={handleDeleteLocation}
+                      sx={{ ml: 2 }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  )}
+                </DialogTitle>
+                <DialogContent dividers sx={{ pt: 3 }}>
+                  <Grid container spacing={2}>
+                    {/* ロケーションIDは編集不可 */}
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="ロケーションID"
+                        name="ロケーションID"
+                        value={formData["ロケーションID"] || ''}
+                        onChange={handleChange}
+                        disabled={true} // ロケーションIDは常に編集不可
+                        margin="dense"
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        freeSolo
+                        options={uniqueLocations}
+                        value={formData["ロケーション"] || ''}
+                        onChange={(event, newValue) => {
+                          handleAutocompleteChange("ロケーション", newValue);
+                        }}
+                        onInputChange={(event, newInputValue) => {
+                          handleAutocompleteChange("ロケーション", newInputValue);
+                        }}
+                        renderInput={(params) => (
+                          <TextField {...params} label="ロケーション" name="ロケーション" margin="dense" variant="outlined" />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        freeSolo
+                        options={uniqueStorageAreas}
+                        value={formData["保管場所"] || ''}
+                        onChange={(event, newValue) => {
+                          handleAutocompleteChange("保管場所", newValue);
+                        }}
+                        onInputChange={(event, newInputValue) => {
+                          handleAutocompleteChange("保管場所", newInputValue);
+                        }}
+                        renderInput={(params) => (
+                          <TextField {...params} label="保管場所" name="保管場所" margin="dense" variant="outlined" />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="詳細①"
+                        name="詳細①"
+                        value={formData["詳細①"] || ''}
+                        onChange={handleChange}
+                        margin="dense"
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="備考"
+                        name="備考"
+                        value={formData["備考"] || ''}
+                        onChange={handleChange}
+                        margin="dense"
+                        variant="outlined"
+                        multiline
+                        rows={2}
+                      />
+                    </Grid>
+                  </Grid>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleDialogClose} color="inherit">
+                    キャンセル
+                  </Button>
+                  <Button onClick={handleSaveLocation} color="primary" variant="contained" disabled={loading}>
+                    {loading ? <CircularProgress size={24} /> : (editingLocation ? '更新' : '追加')}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+        
+              <LocationProductRegistrationDialog
+                open={isProductRegistrationDialogOpen}
+                onClose={handleProductRegistrationDialogClose}
+                locationId={selectedLocationForProductRegistration?.['ロケーションID']}
+                locationName={selectedLocationForProductRegistration?.['ロケーション']}
+                onProductListUpdated={() => fetchLocations()} // ダミー関数を渡す
               />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="ロケーション"
-                name="ロケーション"
-                value={formData["ロケーション"] || ''}
-                onChange={handleChange}
-                margin="dense"
-                variant="outlined"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="保管場所"
-                name="保管場所"
-                value={formData["保管場所"] || ''}
-                onChange={handleChange}
-                margin="dense"
-                variant="outlined"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="詳細①"
-                name="詳細①"
-                value={formData["詳細①"] || ''}
-                onChange={handleChange}
-                margin="dense"
-                variant="outlined"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="備考"
-                name="備考"
-                value={formData["備考"] || ''}
-                onChange={handleChange}
-                margin="dense"
-                variant="outlined"
-                multiline
-                rows={2}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose} color="inherit">
-            キャンセル
-          </Button>
-          <Button onClick={handleSaveLocation} color="primary" variant="contained" disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : (editingLocation ? '更新' : '追加')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <LocationProductRegistrationDialog
-        open={isProductRegistrationDialogOpen}
-        onClose={handleProductRegistrationDialogClose}
-        locationId={selectedLocationForProductRegistration?.['ロケーションID']}
-        locationName={selectedLocationForProductRegistration?.['ロケーション']}
-        onProductListUpdated={() => fetchLocations()} // ダミー関数を渡す
-      />
-    </Box>
-  );
-}
-
-export default LocationMasterPage;
+            </Box>
+          );
+        }
+        
+        export default LocationMasterPage;
+        

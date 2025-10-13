@@ -9,6 +9,7 @@ import MasterEditPage from './pages/MasterEditPage';
 import ProductMasterPage from './pages/ProductMasterPage';
 import SupplierMasterPage from './pages/SupplierMasterPage';
 import LocationMasterPage from './pages/LocationMasterPage'; // 追加
+import InventoryReportPage from './pages/InventoryReportPage'; // 追加
 import SplashVideo from './components/SplashVideo'; // SplashVideo をインポート
 
 // パスとページ名のマッピング
@@ -19,6 +20,7 @@ const pageTitles = {
   '/master/products': '商品マスター',
   '/master/suppliers': '仕入れ先マスター',
   '/master/locations': 'ロケーションマスター', // 追加
+  '/inventory-report': '棚卸記録出力', // 追加
   // 必要に応じて他のパスも追加
 };
 
@@ -148,7 +150,8 @@ function App() {
               <Route path="/master" element={<MasterEditPage />} />
               <Route path="/master/products" element={<ProductMasterPage />} />
               <Route path="/master/suppliers" element={<SupplierMasterPage />} />
-              <Route path="/master/locations" element={<LocationMasterPage />} /> {/* 追加 */}
+              <Route path="/master/locations" element={<LocationMasterPage />} />
+              <Route path="/inventory-report" element={<InventoryReportPage />} /> {/* 追加 */}
             </Routes>
           </Container>
         </Box>

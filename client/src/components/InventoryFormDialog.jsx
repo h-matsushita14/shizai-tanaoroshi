@@ -3,9 +3,10 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Typography, Box, CircularProgress, Alert,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton,
-  useMediaQuery, useTheme, List, ListItem, ListItemText // useMediaQuery, useTheme, List, ListItem, ListItemText を追加
+  useMediaQuery, useTheme, List, ListItem, ListItemText, Tooltip // Tooltip を追加
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add'; // AddIcon をインポート
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // InfoOutlinedIcon を追加
 import LocationProductRegistrationDialog from './LocationProductRegistrationDialog'; // 商品登録ダイアログをインポート
 
 const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
@@ -132,6 +133,13 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
     return parts[0];
   };
 
+  // 棚卸入力状況の計算
+  const totalProducts = products.length;
+  const completedProducts = Object.keys(quantities).filter(productCode => {
+    const { lot, loose } = quantities[productCode];
+    return (lot !== '' && !isNaN(parseInt(lot, 10))) || (loose !== '' && !isNaN(parseInt(loose, 10)));
+  }).length;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -159,54 +167,106 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
           isMobileOrTablet ? (
             <List>
               {products.map((product) => (
-                <ListItem key={product["商品コード"]} divider>
-                  <ListItemText
-                    primary={
-                      <Box>
-                        <Typography variant="body2" color="textSecondary" component="span">商品コード:</Typography>
-                        <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
-                          {product["商品コード"]}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" component="span">商品名:</Typography>
-                        <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
-                          {product["商品名"]}
-                        </Typography>
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        <Box sx={{ mt: 0.5 }}>
-                          <Typography variant="body2" color="textSecondary" component="span">社内名称:</Typography>
-                          <Typography variant="body1" component="span">
+                <ListItem key={product["商品コード"]} divider sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <ListItemText
+                      primary={
+                        <Box>
+                          {/* ラベルを削除 */}
+                          <Typography
+                            variant="subtitle1"
+                            component="span"
+                            sx={{
+                              fontWeight: 'bold',
+                              bgcolor: 'grey.100', // 目立たない程度の薄いグレー
+                              p: 0.5, // パディング
+                              borderRadius: '4px', // 角を丸くする
+                              display: 'inline-block', // 背景色が値の幅に収まるように
+                            }}
+                          >
                             {product["社内名称"] || '-'}
                           </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>ロット数量:</Typography>
-                          <TextField
-                            type="number"
-                            value={quantities[product["商品コード"]]?.lot || ''}
-                            onChange={(e) => handleQuantityChange(product["商品コード"], 'lot', e.target.value)}
-                            inputProps={{ min: 0 }}
-                            size="small"
-                            sx={{ width: '70px', mr: 0.5 }}
-                          />
-                          <Typography variant="body2" sx={{ mr: 2 }}>{formatUnit(product["ロット単位"]) || ''}</Typography>
-
-                          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>バラ数量:</Typography>
-                          <TextField
-                            type="number"
-                            value={quantities[product["商品コード"]]?.loose || ''}
-                            onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
-                            inputProps={{ min: 0 }}
-                            size="small"
-                            sx={{ width: '70px', mr: 0.5 }}
-                          />
-                          <Typography variant="body2">{formatUnit(product["バラ単位"]) || ''}</Typography>
+                      }
+                    />
+                    <Tooltip
+                      title={
+                        <Box>
+                          <Typography variant="body2">商品コード: {product["商品コード"]}</Typography>
+                          <Typography variant="body2">商品名: {product["商品名"]}</Typography>
                         </Box>
-                      </>
-                    }
-                  />
+                      }
+                      arrow
+                      placement="top-end"
+                      enterTouchDelay={0}
+                      leaveTouchDelay={5000}
+                    >
+                      <IconButton size="small" sx={{ alignSelf: 'flex-start', mt: 0.5 }}>
+                        <InfoOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                  {/* 入力欄をListItemTextの外に移動 */}
+                  <Box sx={{ mt: 0.5, width: '100%' }}>
+                    {(() => {
+                      const lotUnit = formatUnit(product["ロット単位"]);
+                      const looseUnit = formatUnit(product["バラ単位"]);
+
+                      if (!lotUnit && !looseUnit) {
+                        return null;
+                      }
+
+                      if (lotUnit && looseUnit && lotUnit === looseUnit) {
+                        return (
+                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                            <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>数量:</Typography>
+                            <TextField
+                              type="number"
+                              value={quantities[product["商品コード"]]?.loose || ''}
+                              onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
+                              inputProps={{ min: 0 }}
+                              size="small"
+                              sx={{ width: '70px', mr: 0.5 }}
+                            />
+                            <Typography variant="body2">{looseUnit}</Typography>
+                          </Box>
+                        );
+                      }
+
+                      return (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mt: 1, gap: 1 }}> {/* 変更: flexWrap と gap を追加 */}
+                          {lotUnit && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>ロット数量:</Typography>
+                              <TextField
+                                type="number"
+                                value={quantities[product["商品コード"]]?.lot || ''}
+                                onChange={(e) => handleQuantityChange(product["商品コード"], 'lot', e.target.value)}
+                                inputProps={{ min: 0 }}
+                                size="small"
+                                sx={{ width: '70px', mr: 0.5 }}
+                              />
+                              <Typography variant="body2">{lotUnit}</Typography>
+                            </Box>
+                          )}
+                          {looseUnit && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>バラ数量:</Typography>
+                              <TextField
+                                type="number"
+                                value={quantities[product["商品コード"]]?.loose || ''}
+                                onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
+                                inputProps={{ min: 0 }}
+                                size="small"
+                                sx={{ width: '70px', mr: 0.5 }}
+                              />
+                              <Typography variant="body2">{looseUnit}</Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })()}
+                  </Box>
                 </ListItem>
               ))}
             </List>
@@ -222,49 +282,67 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product["商品コード"]}>
-                      <TableCell>{product["商品コード"]}</TableCell>
-                      <TableCell>{product["商品名"]}</TableCell>
-                      <TableCell align="right" sx={{ width: '100px' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <TextField
-                            type="number"
-                            value={quantities[product["商品コード"]]?.lot || ''}
-                            onChange={(e) => handleQuantityChange(product["商品コード"], 'lot', e.target.value)}
-                            inputProps={{ min: 0 }}
-                            size="small"
-                            sx={{ width: '70px', mr: 0.5 }} // 単位との間に少しスペース
-                          />
-                          <Typography variant="body2">{formatUnit(product["ロット単位"]) || ''}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right" sx={{ width: '100px' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <TextField
-                            type="number"
-                            value={quantities[product["商品コード"]]?.loose || ''}
-                            onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
-                            inputProps={{ min: 0 }}
-                            size="small"
-                            sx={{ width: '70px', mr: 0.5 }} // 単位との間に少しスペース
-                          />
-                          <Typography variant="body2">{formatUnit(product["バラ単位"]) || ''}</Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {products.map((product) => {
+                    const lotUnit = formatUnit(product["ロット単位"]);
+                    const looseUnit = formatUnit(product["バラ単位"]);
+
+                    const isSameUnit = lotUnit && looseUnit && lotUnit === looseUnit;
+
+                    return (
+                      <TableRow key={product["商品コード"]}>
+                        <TableCell>{product["商品コード"]}</TableCell>
+                        <TableCell>{product["商品名"]}</TableCell>
+                        <TableCell align="right" sx={{ width: '100px' }}>
+                          {/* ロットとバラの単位が同じでない場合、またはロット単位のみ存在する場合に表示 */}
+                          {!isSameUnit && lotUnit && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              <TextField
+                                type="number"
+                                value={quantities[product["商品コード"]]?.lot || ''}
+                                onChange={(e) => handleQuantityChange(product["商品コード"], 'lot', e.target.value)}
+                                inputProps={{ min: 0 }}
+                                size="small"
+                                sx={{ width: '70px', mr: 0.5 }}
+                              />
+                              <Typography variant="body2">{lotUnit}</Typography>
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell align="right" sx={{ width: '100px' }}>
+                          {/* バラ単位が存在し、かつ (ロットとバラの単位が同じ場合、またはロット単位がない場合) に表示 */}
+                          {looseUnit && (isSameUnit || !lotUnit) && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              <TextField
+                                type="number"
+                                value={quantities[product["商品コード"]]?.loose || ''}
+                                onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
+                                inputProps={{ min: 0 }}
+                                size="small"
+                                sx={{ width: '70px', mr: 0.5 }}
+                              />
+                              <Typography variant="body2">{looseUnit}</Typography>
+                            </Box>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
           )
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>キャンセル</Button>
-        <Button onClick={handleSave} color="primary" variant="contained" disabled={loading || products.length === 0}>
-          保存
-        </Button>
+      <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 1.5 }}>
+        <Typography variant="subtitle1" color="textSecondary">
+          入力状況: {completedProducts}/{totalProducts}
+        </Typography>
+        <Box>
+          <Button onClick={onClose}>キャンセル</Button>
+          <Button onClick={handleSave} color="primary" variant="contained" disabled={loading || products.length === 0}>
+            保存
+          </Button>
+        </Box>
       </DialogActions>
 
       <LocationProductRegistrationDialog

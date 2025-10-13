@@ -1,8 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert, Typography, IconButton } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert, Typography, IconButton, MenuItem, Autocomplete } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-function EditProductDialog({ open, handleClose, product, onProductUpdated, products }) {
+// 表示するフィールドの順序を定義
+const fieldOrder = [
+  "商品コード",
+  "区分",
+  "商品名",
+  "社内名称",
+  "仕入先ID",
+  "仕入先名",
+  "規格",
+  "単価",
+  "ケース入数",
+  "バラ単位",
+  "ロット",
+  "ロット単位",
+  "リードタイム (日)",
+  "安全在庫数",
+  "備考1",
+  "備考2",
+  "備考3",
+  "最終更新日"
+];
+
+function EditProductDialog({ open, handleClose, product, onProductUpdated, products, suppliers, lotUnits, pieceUnits }) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -33,6 +55,13 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleAutocompleteChange = (name, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value || '',
     }));
   };
 
@@ -147,6 +176,10 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
     }
   };
 
+  if (!product) {
+    return null;
+  }
+
   return (
           <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
             <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
@@ -164,20 +197,82 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
               )}
             </DialogTitle>
             <DialogContent dividers sx={{ pt: 3 }}>        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Grid container spacing={2}>
-          {product && Object.keys(product).map((key) => (
-            // idは表示しない、商品コードは編集不可、バーコード/QRコードは表示しない
-            key !== 'id' && key !== 'バーコード/QRコード' && (
+        <Grid container spacing={2} sx={{ pt: 1 }}>
+          {fieldOrder.map((key) => (
+            // productオブジェクトにそのキーが存在し、かつ除外対象でない場合のみ表示
+            product.hasOwnProperty(key) && key !== 'id' && key !== 'バーコード/QRコード' && (
               <Grid item xs={12} sm={6} key={key}>
-                <TextField
-                  fullWidth
-                  label={key}
-                  name={key}
-                  value={formData[key] || ''}
-                  onChange={handleChange}
-                  type={['単価', 'ケース入数', 'バラ単位', 'ロット', 'リードタイム (日)', '安全在庫数'].includes(key) ? 'number' : 'text'}
-                  disabled={key === '商品コード'} // 商品コードは編集不可
-                />
+                {key === "区分" ? (
+                  <TextField
+                    select
+                    fullWidth
+                    label="区分"
+                    name="区分"
+                    value={formData["区分"] || ''}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="資材">資材</MenuItem>
+                    <MenuItem value="食材">食材</MenuItem>
+                    <MenuItem value="その他">その他</MenuItem>
+                  </TextField>
+                ) : key === "仕入先ID" ? (
+                  <TextField
+                    select
+                    fullWidth
+                    label="仕入先ID"
+                    name="仕入先ID"
+                    value={formData["仕入先ID"] || ''}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="">
+                      <em>選択してください</em>
+                    </MenuItem>
+                    {suppliers && suppliers.map((supplier) => (
+                      <MenuItem key={supplier["仕入先ID"]} value={supplier["仕入先ID"]}>
+                        {`${supplier["仕入先ID"]}: ${supplier["仕入先名"]}`}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : key === "ロット単位" ? (
+                  <Autocomplete
+                    freeSolo
+                    options={lotUnits || []}
+                    value={formData[key] || ''}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange(key, newValue);
+                    }}
+                    onInputChange={(event, newInputValue) => {
+                      handleAutocompleteChange(key, newInputValue);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="ロット単位" name="ロット単位" />
+                    )}
+                  />
+                ) : key === "バラ単位" ? (
+                  <Autocomplete
+                    freeSolo
+                    options={pieceUnits || []}
+                    value={formData[key] || ''}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange(key, newValue);
+                    }}
+                    onInputChange={(event, newInputValue) => {
+                      handleAutocompleteChange(key, newInputValue);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="バラ単位" name="バラ単位" />
+                    )}
+                  />
+                ) : (
+                  <TextField
+                    fullWidth
+                    label={key}
+                    name={key}
+                    value={formData[key] || ''}
+                    onChange={handleChange}
+                    disabled={key === '商品コード'} // 商品コードは編集不可
+                  />
+                )}
               </Grid>
             )
           ))}

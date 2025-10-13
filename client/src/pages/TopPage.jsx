@@ -22,7 +22,7 @@ function TopPage() {
       title: '棚卸記録出力',
       description: '過去の棚卸記録をCSV形式で出力します。',
       icon: <AssessmentIcon sx={{ fontSize: isMobile ? 40 : (isTablet ? 50 : 70) }} color="secondary" />,
-      path: '/export', // 未実装
+      path: '/inventory-report', // 変更
     },
     {
       title: 'マスター登録・編集',
@@ -33,11 +33,7 @@ function TopPage() {
   ];
 
   const handleCardClick = (path) => {
-    if (path === '/export') {
-      alert('この機能は現在実装中です。');
-    } else {
-      navigate(path);
-    }
+    navigate(path);
   };
 
   return (

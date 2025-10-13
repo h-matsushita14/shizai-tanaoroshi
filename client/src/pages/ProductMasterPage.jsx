@@ -47,6 +47,8 @@ function ProductMasterPage() {
   const [orderBy, setOrderBy] = useState('商品コード'); // ソート対象の列
   const [order, setOrder] = useState('asc'); // ソート順 (asc/desc)
   const [suppliers, setSuppliers] = useState([]); // 仕入先リストの状態
+  const [lotUnits, setLotUnits] = useState([]);
+  const [pieceUnits, setPieceUnits] = useState([]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md')); // md以下の画面サイズでtrue
@@ -75,6 +77,12 @@ function ProductMasterPage() {
           ...product,
         }));
         setProducts(productsWithId);
+
+        const lotUnitsSet = new Set(result.data.map(p => p['ロット単位']).filter(Boolean));
+        const pieceUnitsSet = new Set(result.data.map(p => p['バラ単位']).filter(Boolean));
+        setLotUnits([...lotUnitsSet]);
+        setPieceUnits([...pieceUnitsSet]);
+
       } else {
         throw new Error(result.message || '商品データの取得に失敗しました。');
       }
@@ -145,15 +153,15 @@ function ProductMasterPage() {
   });
 
   const columns = [
-    { field: '商品コード', headerName: '商品コード', width: 150 },
-    { field: '商品名', headerName: '商品名', width: 250 },
-    { field: '社内名称', headerName: '社内名称', width: 150 },
-    { field: '仕入先名', headerName: '仕入先名', width: 150 },
-    { field: '最終更新日', headerName: '最終更新日', width: 150 },
+    { field: '商品コード', headerName: '商品コード', width: '10%' },
+    { field: '商品名', headerName: '商品名', width: '25%' },
+    { field: '社内名称', headerName: '社内名称', width: '15%' },
+    { field: '仕入先名', headerName: '仕入先名', width: '15%' },
+    { field: '最終更新日', headerName: '最終更新日', width: '15%' },
     {
       field: 'actions',
       headerName: '操作',
-      width: 250,
+      width: '20%',
       sortable: false, // ソート不可に設定
       renderCell: (params) => (
         <>
@@ -277,21 +285,22 @@ function ProductMasterPage() {
           ))}
         </Grid>
       ) : (
-        <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 600, overflow: 'auto' }}>
-          <Table stickyHeader aria-label="商品マスターテーブル">
+        <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 600, overflow: 'auto' }}> {/* 変更 */}
+          <Table stickyHeader aria-label="商品マスターテーブル" sx={{ tableLayout: 'fixed', width: '100%' }}> {/* 変更 */}
             <TableHead>
               <TableRow>
                 {columns.map((column) => (
                   <TableCell
                     key={column.field}
                     sortDirection={orderBy === column.field ? order : false}
-                    style={{ minWidth: column.width }}
+                    style={{ width: column.width }} // minWidth から width に変更
                   >
                     {column.headerName !== '操作' ? (
                       <TableSortLabel
                         active={orderBy === column.field}
                         direction={orderBy === column.field ? order : 'asc'}
                         onClick={() => handleRequestSort(column.field)}
+                        sx={{ whiteSpace: 'nowrap' }}
                       >
                         {column.headerName}
                       </TableSortLabel>
@@ -320,14 +329,20 @@ function ProductMasterPage() {
         open={isAddDialogOpen}
         handleClose={handleCloseAddDialog}
         onProductAdded={fetchProducts}
-        products={products} // 重複チェックのために商品リストを渡す
+        products={products}
+        suppliers={suppliers}
+        lotUnits={lotUnits}
+        pieceUnits={pieceUnits}
       />
       <EditProductDialog
         open={isEditDialogOpen}
         handleClose={handleCloseEditDialog}
         product={editingProduct}
         onProductUpdated={fetchProducts}
-        products={products} // 重複チェックのために商品リストを渡す
+        products={products}
+        suppliers={suppliers}
+        lotUnits={lotUnits}
+        pieceUnits={pieceUnits}
       />
       <ProductDetailsDialog
         open={isDetailsDialogOpen}
