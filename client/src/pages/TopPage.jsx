@@ -20,7 +20,7 @@ function TopPage() {
     },
     {
       title: '棚卸記録出力',
-      description: '過去の棚卸記録をCSV形式で出力します。',
+      description: '過去の棚卸記録を出力します。',
       icon: <AssessmentIcon sx={{ fontSize: isMobile ? 40 : (isTablet ? 50 : 70) }} color="secondary" />,
       path: '/inventory-report', // 変更
     },

@@ -56,27 +56,17 @@ function doGet(e) {
     
     const response = {
       status: 'success',
-      version: 'Code.js v4.0', // デプロイ確認用のバージョン情報
+      version: 'Code.js v4.0',
       data: payload
     };
-
-    const output = ContentService
-      .createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    const output = ContentService.createTextOutput(JSON.stringify(response));
+    output.setMimeType(ContentService.MimeType.JSON);
     return output;
 
   } catch (error) {
-    Logger.log("エラー発生 (GET): " + error.message);
-    const errorResponse = {
-      status: 'error',
-      version: 'Code.js v4.0', // エラー発生時もバージョンを返す
-      message: error.message
-    };
-    const output = ContentService
-      .createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    const output = ContentService.createTextOutput(JSON.stringify(errorResponse));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'https://shizai-tanaoroshi.netlify.app'});
     return output;
   }
 }
@@ -134,10 +124,9 @@ function doPost(e) {
       data: payload
     };
 
-    const output = ContentService
-      .createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    const output = ContentService.createTextOutput(JSON.stringify(response));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'https://shizai-tanaoroshi.netlify.app'});
     return output;
 
   } catch (error) {
@@ -147,10 +136,9 @@ function doPost(e) {
       version: 'Code.js v4.0',
       message: error.message
     };
-    const output = ContentService
-      .createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    const output = ContentService.createTextOutput(JSON.stringify(errorResponse));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'https://shizai-tanaoroshi.netlify.app'});
     return output;
   }
 }
