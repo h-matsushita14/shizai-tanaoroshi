@@ -60,9 +60,11 @@ function doGet(e) {
       data: payload
     };
 
-    return ContentService
+    const output = ContentService
       .createTextOutput(JSON.stringify(response))
       .setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    return output;
 
   } catch (error) {
     Logger.log("エラー発生 (GET): " + error.message);
@@ -71,9 +73,11 @@ function doGet(e) {
       version: 'Code.js v4.0', // エラー発生時もバージョンを返す
       message: error.message
     };
-    return ContentService
+    const output = ContentService
       .createTextOutput(JSON.stringify(errorResponse))
       .setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    return output;
   }
 }
 
@@ -130,9 +134,11 @@ function doPost(e) {
       data: payload
     };
 
-    return ContentService
+    const output = ContentService
       .createTextOutput(JSON.stringify(response))
       .setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    return output;
 
   } catch (error) {
     Logger.log("エラー発生 (POST): " + error.message);
@@ -141,8 +147,10 @@ function doPost(e) {
       version: 'Code.js v4.0',
       message: error.message
     };
-    return ContentService
+    const output = ContentService
       .createTextOutput(JSON.stringify(errorResponse))
       .setMimeType(ContentService.MimeType.JSON);
+    output.setHeaders({'Access-Control-Allow-Origin': 'http://localhost:5173'});
+    return output;
   }
 }

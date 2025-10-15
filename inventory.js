@@ -1,4 +1,4 @@
-const SPREADSHEET_ID = "1l7H7IusQbqPukypEoEn4tKotVR9PfGS95Yz2vuZNFNI"; // api.js と同じ定数
+
 
 /**
  * 指定された年月の末日を起点として、各商品ごとに最も近い棚卸記録を抽出するヘルパー関数
