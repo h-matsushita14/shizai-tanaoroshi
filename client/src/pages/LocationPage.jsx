@@ -11,7 +11,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // 追加
 import InteractiveMap from '../components/InteractiveMap';
 import InventoryFormDialog from '../components/InventoryFormDialog';
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
