@@ -9,7 +9,7 @@ import AddIcon from '@mui/icons-material/Add'; // AddIcon をインポート
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // InfoOutlinedIcon を追加
 import LocationProductRegistrationDialog from './LocationProductRegistrationDialog'; // 商品登録ダイアログをインポート
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
 function InventoryFormDialog({ open, onClose, locationId, locationName, locationDetail }) {
   const [products, setProducts] = useState([]);
