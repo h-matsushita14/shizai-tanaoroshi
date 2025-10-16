@@ -12,6 +12,7 @@ import InteractiveMap from '../components/InteractiveMap';
 import InventoryFormDialog from '../components/InventoryFormDialog';
 
 const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
+console.log("GAS_WEB_APP_URL:", GAS_WEB_APP_URL);
 const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 

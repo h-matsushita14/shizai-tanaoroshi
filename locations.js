@@ -1,4 +1,6 @@
-function getLocations() {
+import { SPREADSHEET_ID } from './config.js';
+
+export function getLocations() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const locationSheet = ss.getSheetByName("Location_Master");
   if (!locationSheet) throw new Error("Location_Masterシートが見つかりません。");
@@ -128,7 +130,7 @@ function getLocations() {
  * Location_Masterシートから全てのロケーションデータを取得する (マスター用)
  * @returns {Array<Object>} ロケーションデータの配列
  */
-function getLocationsMaster() {
+export function getLocationsMaster() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Master");
   if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
@@ -151,7 +153,7 @@ function getLocationsMaster() {
  * @param {Object} locationData - 追加するロケーションデータ
  * @returns {Object} 追加されたロケーションデータとメッセージ
  */
-function addLocation(locationData) {
+export function addLocation(locationData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Master");
   if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
@@ -188,7 +190,7 @@ function addLocation(locationData) {
  * @param {Object} locationData - 更新するロケーションデータ (ロケーションIDが必須)
  * @returns {Object} 更新されたロケーションデータとメッセージ
  */
-function editLocation(locationData) {
+export function editLocation(locationData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Master");
   if (!sheet) throw new Error("Location_Masterシートが見つかりません。");
@@ -231,7 +233,7 @@ function editLocation(locationData) {
  * @param {string} locationId - 削除するロケーションのID
  * @returns {Object} 削除されたロケーションIDとメッセージ
  */
-function deleteLocation(locationId) {
+export function deleteLocation(locationId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Master");
   if (!sheet) throw new Error("Location_Masterシートが見つかりません。");

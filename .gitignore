@@ -1,8 +1,10 @@
 # Dependencies
 /node_modules
 /client/node_modules
+package-lock.json
 
 # Build artifacts
+/dist
 /client/dist
 
 # Log files

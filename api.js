@@ -1,12 +1,42 @@
-const SPREADSHEET_ID = "1l7H7IusQbqPukypEoEn4tKotVR9PfGS95Yz2vuZNFNI";
+import {
+  getInventoryRecordsJson,
+  exportInventoryRecordsCsv,
+  exportInventoryRecordsExcel,
+  exportInventoryRecordsPdf,
+} from './inventory.js';
+import {
+  getLocations,
+  getLocationsMaster,
+  addLocation,
+  editLocation,
+  deleteLocation,
+} from './locations.js';
+import {
+  getProductsByLocation,
+  addLocationProduct,
+  deleteLocationProduct,
+} from './mappings.js';
+import {
+  getProducts,
+  addProduct,
+  editProduct,
+  deleteProduct,
+} from './products.js';
+import {
+  getSuppliers,
+  addSupplier,
+  editSupplier,
+  deleteSupplier,
+} from './suppliers.js';
+import { setupInventoryAppSheets } from './setup.js';
 
+// Web App entry points
 function doGet(e) {
-  // リクエストの内容をログに出力してデバッグしやすくする
   Logger.log("リクエスト受信 (GET): " + JSON.stringify(e));
 
   const action = e.parameter.action;
-  const year = parseInt(e.parameter.year, 10); // 年を取得
-  const month = parseInt(e.parameter.month, 10); // 月を取得
+  const year = parseInt(e.parameter.year, 10);
+  const month = parseInt(e.parameter.month, 10);
   let payload;
 
   try {
@@ -24,49 +54,45 @@ function doGet(e) {
         }
         payload = getProductsByLocation(locationId);
         break;
-      case 'getSuppliers': // 追加
+      case 'getSuppliers':
         payload = getSuppliers();
         break;
-      case 'getLocationsMaster': // 追加
+      case 'getLocationsMaster':
         payload = getLocationsMaster();
         break;
-
-      case 'getInventoryRecordsJson': // 追加
+      case 'getInventoryRecordsJson':
         payload = getInventoryRecordsJson(year, month);
         break;
-
       case 'exportInventoryRecordsCsv':
-        payload = exportInventoryRecordsCsv(year, month); // 年月を渡す
-        return ContentService
-          .createTextOutput(payload)
-          .setMimeType(ContentService.MimeType.TEXT); // CSVはTEXTとして返す
-
+        payload = exportInventoryRecordsCsv(year, month);
+        return ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.TEXT);
       case 'exportInventoryRecordsExcel':
-        payload = exportInventoryRecordsExcel(year, month); // 年月を渡す
+        payload = exportInventoryRecordsExcel(year, month);
         break;
-
       case 'exportInventoryRecordsPdf':
-        payload = exportInventoryRecordsPdf(year, month); // 年月を渡す
+        payload = exportInventoryRecordsPdf(year, month);
         break;
-
       default:
-        // actionが指定されていない、またはサポート外の場合
         throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=getLocations)");
     }
-    
+
     const response = {
       status: 'success',
-      version: 'Code.js v4.0',
-      data: payload
+      version: 'Code.js v5.0 (webpack)',
+      data: payload,
     };
     const output = ContentService.createTextOutput(JSON.stringify(response));
     output.setMimeType(ContentService.MimeType.JSON);
     return output;
-
   } catch (error) {
+    Logger.log("エラー発生 (GET): " + error.message);
+    const errorResponse = {
+      status: 'error',
+      version: 'Code.js v5.0 (webpack)',
+      message: error.message,
+    };
     const output = ContentService.createTextOutput(JSON.stringify(errorResponse));
     output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'https://shizai-tanaoroshi.netlify.app'});
     return output;
   }
 }
@@ -90,28 +116,28 @@ function doPost(e) {
       case 'deleteProduct':
         payload = deleteProduct(requestBody);
         break;
-      case 'addSupplier': // 追加
+      case 'addSupplier':
         payload = addSupplier(requestBody);
         break;
-      case 'editSupplier': // 追加
+      case 'editSupplier':
         payload = editSupplier(requestBody);
         break;
-      case 'deleteSupplier': // 追加
-        payload = deleteSupplier(requestBody.supplierId); // supplierIdを直接渡す
+      case 'deleteSupplier':
+        payload = deleteSupplier(requestBody.supplierId);
         break;
-      case 'addLocation': // 追加
+      case 'addLocation':
         payload = addLocation(requestBody);
         break;
-      case 'editLocation': // 追加
+      case 'editLocation':
         payload = editLocation(requestBody);
         break;
-      case 'deleteLocation': // 追加
+      case 'deleteLocation':
         payload = deleteLocation(requestBody.locationId);
         break;
-      case 'addLocationProduct': // 追加
+      case 'addLocationProduct':
         payload = addLocationProduct(requestBody.locationId, requestBody.productCode);
         break;
-      case 'deleteLocationProduct': // 追加
+      case 'deleteLocationProduct':
         payload = deleteLocationProduct(requestBody.locationId, requestBody.productCode);
         break;
       default:
@@ -120,25 +146,27 @@ function doPost(e) {
 
     const response = {
       status: 'success',
-      version: 'Code.js v4.0',
-      data: payload
+      version: 'Code.js v5.0 (webpack)',
+      data: payload,
     };
 
     const output = ContentService.createTextOutput(JSON.stringify(response));
     output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'https://shizai-tanaoroshi.netlify.app'});
     return output;
-
   } catch (error) {
     Logger.log("エラー発生 (POST): " + error.message);
     const errorResponse = {
       status: 'error',
-      version: 'Code.js v4.0',
-      message: error.message
+      version: 'Code.js v5.0 (webpack)',
+      message: error.message,
     };
     const output = ContentService.createTextOutput(JSON.stringify(errorResponse));
     output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeaders({'Access-Control-Allow-Origin': 'https://shizai-tanaoroshi.netlify.app'});
     return output;
   }
 }
+
+// Expose functions to global scope for Google Apps Script
+global.doGet = doGet;
+global.doPost = doPost;
+global.setupInventoryAppSheets = setupInventoryAppSheets;

@@ -1,4 +1,6 @@
-function getProductsByLocation(locationId) {
+import { SPREADSHEET_ID } from './config.js';
+
+export function getProductsByLocation(locationId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const locationProductSheet = ss.getSheetByName("Location_Product_Mapping");
   if (!locationProductSheet) throw new Error("Location_Product_Mappingシートが見つかりません。");
@@ -64,7 +66,7 @@ function getProductsByLocation(locationId) {
  * @param {string} productCode - 商品コード
  * @returns {Object} メッセージ
  */
-function addLocationProduct(locationId, productCode) {
+export function addLocationProduct(locationId, productCode) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Product_Mapping");
   if (!sheet) throw new Error("Location_Product_Mappingシートが見つかりません。");
@@ -96,7 +98,7 @@ function addLocationProduct(locationId, productCode) {
  * @param {string} productCode - 商品コード
  * @returns {Object} メッセージ
  */
-function deleteLocationProduct(locationId, productCode) {
+export function deleteLocationProduct(locationId, productCode) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Location_Product_Mapping");
   if (!sheet) throw new Error("Location_Product_Mappingシートが見つかりません。");

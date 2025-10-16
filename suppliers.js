@@ -1,8 +1,10 @@
+import { SPREADSHEET_ID } from './config.js';
+
 /**
  * Supplier_Masterシートから全ての仕入れ先データを取得する
  * @returns {Array<Object>} 仕入れ先データの配列
  */
-function getSuppliers() {
+export function getSuppliers() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Supplier_Master");
   if (!sheet) throw new Error("Supplier_Masterシートが見つかりません。");
@@ -25,7 +27,7 @@ function getSuppliers() {
  * @param {Object} supplierData - 追加する仕入れ先データ (例: { "仕入先名": "新しい仕入れ先", "連絡先": "...", "住所": "..." })
  * @returns {Object} 追加された仕入れ先データとメッセージ
  */
-function addSupplier(supplierData) {
+export function addSupplier(supplierData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Supplier_Master");
   if (!sheet) throw new Error("Supplier_Masterシートが見つかりません。");
@@ -63,7 +65,7 @@ function addSupplier(supplierData) {
  * @param {Object} supplierData - 更新する仕入れ先データ (仕入先IDが必須)
  * @returns {Object} 更新された仕入れ先データとメッセージ
  */
-function editSupplier(supplierData) {
+export function editSupplier(supplierData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Supplier_Master");
   if (!sheet) throw new Error("Supplier_Masterシートが見つかりません。");
@@ -106,7 +108,7 @@ function editSupplier(supplierData) {
  * @param {string} supplierId - 削除する仕入れ先のID
  * @returns {Object} 削除された仕入れ先IDとメッセージ
  */
-function deleteSupplier(supplierId) {
+export function deleteSupplier(supplierId) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Supplier_Master");
   if (!sheet) throw new Error("Supplier_Masterシートが見つかりません。");

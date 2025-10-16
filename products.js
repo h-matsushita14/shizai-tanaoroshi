@@ -1,4 +1,6 @@
-function addProduct(productData) {
+import { SPREADSHEET_ID } from './config.js';
+
+export function addProduct(productData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Product_Master");
   if (!sheet) throw new Error("Product_Masterシートが見つかりません。");
@@ -34,7 +36,7 @@ function addProduct(productData) {
   return { message: "商品が正常に追加されました。", product: productData };
 }
 
-function editProduct(productData) {
+export function editProduct(productData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Product_Master");
   if (!sheet) throw new Error("Product_Masterシートが見つかりません。");
@@ -74,7 +76,7 @@ function editProduct(productData) {
   return { message: "商品が正常に更新されました。", product: productData };
 }
 
-function deleteProduct(productData) {
+export function deleteProduct(productData) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Product_Master");
   if (!sheet) throw new Error("Product_Masterシートが見つかりません。");
@@ -103,7 +105,7 @@ function deleteProduct(productData) {
   return { message: "商品が正常に削除されました。", productCode: productData["商品コード"] };
 }
 
-function getProducts() {
+export function getProducts() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const productSheet = ss.getSheetByName("Product_Master");
   if (!productSheet) throw new Error("Product_Masterシートが見つかりません。");

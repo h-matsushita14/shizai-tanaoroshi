@@ -1,4 +1,4 @@
-
+import { SPREADSHEET_ID } from './config.js';
 
 /**
  * 指定された年月の末日を起点として、各商品ごとに最も近い棚卸記録を抽出するヘルパー関数
@@ -7,7 +7,7 @@
  * @param {number} targetMonth - 対象月 (1-12)
  * @returns {Array<Array<any>>} 抽出された棚卸記録のデータ（ヘッダー含む）
  */
-function filterInventoryRecordsByClosestDate(allRecords, targetYear, targetMonth) {
+export function filterInventoryRecordsByClosestDate(allRecords, targetYear, targetMonth) {
   if (allRecords.length <= 1) { // ヘッダーのみ、またはデータがない場合
     return allRecords;
   }
@@ -80,7 +80,7 @@ function filterInventoryRecordsByClosestDate(allRecords, targetYear, targetMonth
  * @param {number} month - 取得する月 (1-12)
  * @returns {Array<Array<any>>} 棚卸記録のデータ（ヘッダー含む）
  */
-function getInventoryRecords(year, month) {
+export function getInventoryRecords(year, month) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Inventory_Records");
   if (!sheet) throw new Error("Inventory_Recordsシートが見つかりません。");
@@ -95,7 +95,7 @@ function getInventoryRecords(year, month) {
  * @param {number} month - 取得する月 (1-12)
  * @returns {Array<Object>} 棚卸記録のデータ（オブジェクトの配列）
  */
-function getInventoryRecordsJson(year, month) {
+export function getInventoryRecordsJson(year, month) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName("Inventory_Records");
   if (!sheet) throw new Error("Inventory_Recordsシートが見つかりません。");
@@ -128,7 +128,7 @@ function getInventoryRecordsJson(year, month) {
  * @param {number} month - 取得する月
  * @returns {string} CSV形式の文字列
  */
-function exportInventoryRecordsCsv(year, month) {
+export function exportInventoryRecordsCsv(year, month) {
   const records = getInventoryRecords(year, month);
   if (records.length <= 1) { // ヘッダーのみ、またはデータがない場合
     return records.length === 1 ? records[0].join(',') : ""; // ヘッダーのみの場合はヘッダーを返す
@@ -152,7 +152,7 @@ function exportInventoryRecordsCsv(year, month) {
  * @param {number} month - 取得する月
  * @returns {string} 生成されたスプレッドシートのURL
  */
-function exportInventoryRecordsExcel(year, month) {
+export function exportInventoryRecordsExcel(year, month) {
   const records = getInventoryRecords(year, month);
   if (records.length <= 1) {
     throw new Error("出力する棚卸記録がありません。");
@@ -172,7 +172,7 @@ function exportInventoryRecordsExcel(year, month) {
  * @param {number} month - 取得する月
  * @returns {string} 生成されたPDFファイルのURL
  */
-function exportInventoryRecordsPdf(year, month) {
+export function exportInventoryRecordsPdf(year, month) {
   const records = getInventoryRecords(year, month);
   if (records.length <= 1) {
     throw new Error("出力する棚卸記録がありません。");
