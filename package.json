@@ -19,12 +19,8 @@
   },
   "homepage": "https://github.com/h-matsushita14/shizai-tanaoroshi#readme",
   "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@babel/preset-env": "^7.28.3",
-    "babel-loader": "^10.0.0",
-    "copy-webpack-plugin": "^13.0.1",
-    "gas-webpack-plugin": "^2.6.0",
-    "webpack": "^5.102.1",
-    "webpack-cli": "^6.0.1"
+    "@types/google-apps-script": "^2.0.5",
+    "@types/node": "^24.7.2",
+    "typescript": "^5.9.3"
   }
 }
