@@ -1,8 +1,18 @@
+/**
+ * 共通CORSヘッダー付与関数
+ */
+function withCors(output) {
+    output.setHeader('Access-Control-Allow-Origin', 'https://shizai-tanaoroshi.netlify.app');
+    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return output;
+}
+/**
+ * OPTIONSリクエスト (CORSプリフライト)
+ */
 function doOptions(e) {
-    return ContentService.createTextOutput()
-        .addHeader('Access-Control-Allow-Origin', 'https://shizai-tanaoroshi.netlify.app')
-        .addHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-        .addHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return withCors(ContentService.createTextOutput(''))
+        .setMimeType(ContentService.MimeType.TEXT);
 }
 // GET リクエストハンドラ
 function doGet(e) {
@@ -45,8 +55,8 @@ function doGet(e) {
                     throw new Error("'year'と'month'パラメータが必要です。");
                 }
                 payload = exportInventoryRecordsCsv(year, month);
-                return ContentService.createTextOutput(payload)
-                    .setMimeType(ContentService.MimeType.TEXT);
+                return withCors(ContentService.createTextOutput(payload)
+                    .setMimeType(ContentService.MimeType.TEXT));
             case 'exportInventoryRecordsExcel':
                 if (!year || !month) {
                     throw new Error("'year'と'month'パラメータが必要です。");
@@ -78,12 +88,14 @@ function doGet(e) {
         };
     }
     if (callback) {
+        // JSONPはCORSヘッダー不要
         return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
     else {
-        return ContentService.createTextOutput(JSON.stringify(responsePayload))
+        const response = ContentService.createTextOutput(JSON.stringify(responsePayload))
             .setMimeType(ContentService.MimeType.JSON);
+        return withCors(response);
     }
 }
 // POST リクエストハンドラ
@@ -172,6 +184,7 @@ function doPost(e) {
             message: error.message
         };
     }
-    return ContentService.createTextOutput(JSON.stringify(responsePayload))
+    const response = ContentService.createTextOutput(JSON.stringify(responsePayload))
         .setMimeType(ContentService.MimeType.JSON);
+    return withCors(response);
 }
