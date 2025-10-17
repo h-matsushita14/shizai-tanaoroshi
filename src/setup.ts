@@ -8,7 +8,7 @@
  * 5. Cost_Calculation (金額算出) - 自動計算用
  * 6. Stock_Summary (在庫サマリー) - VIEW用
  */
-export function setupInventoryAppSheets() {
+function setupInventoryAppSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetsConfig = [
     { 
@@ -111,7 +111,7 @@ export function setupInventoryAppSheets() {
  * 金額算出シートに、棚卸記録（記録時単価）を参照するARRAYFORMULAを設定する
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Cost_Calculationシートオブジェクト
  */
-export function setCalculationFormulas(sheet) {
+function setCalculationFormulas(sheet) {
   // Inventory_Recordsの列構成: A: 記録日時, B: 商品コード, C: ロケーションID, D: ロット数量, E: ロット単位, F: バラ数量, G: バラ単位, H: 記録時単価, I: 担当者, J: 備考
   // Product_Masterの列構成: A: 商品コード, ..., H: ケース入数
   
@@ -127,7 +127,7 @@ export function setCalculationFormulas(sheet) {
   // Inventory_Records!D2:D (ロット数量), Inventory_Records!F2:F (バラ数量)
   // Product_Masterからケース入数をVLOOKUP (Product_Master!A:H の8列目)
   const totalQuantityFormula = 
-    '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!B2:B),, ' +
+    '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!B2:B),, ' + 
       '(N(Inventory_Records!D2:D) * IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:H, 8, FALSE), 0)) + ' +
       'N(Inventory_Records!F2:F)' +
     '))';
@@ -158,7 +158,7 @@ export function setCalculationFormulas(sheet) {
  * VIEW（SQLライクなQUERY関数）を設定する。
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Stock_Summaryシートオブジェクト
  */
-export function setSummaryViewFormula(sheet) {
+function setSummaryViewFormula(sheet) {
   // Inventory_Records (A: 記録日時, B: 商品コード, C: ロケーションID, D: ロット数量, E: ロット単位, F: バラ数量, G: バラ単位, H: 記録時単価)
   // Product_Master (A: 商品コード, C: 商品名, H: ケース入数)
   // Location_Master (A: ロケーションID, B: 保管場所, C: 詳細①, D: 備考)

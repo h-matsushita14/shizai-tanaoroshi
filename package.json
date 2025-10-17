@@ -4,8 +4,9 @@
   "description": "",
   "main": "dist/Code.js",
   "scripts": {
-    "build": "webpack",
-    "deploy": "npm run build && clasp push"
+    "build": "tsc && copy appsscript.json dist\\appsscript.json",
+    "deploy": "npm run build && clasp push",
+    "watch": "tsc --watch"
   },
   "repository": {
     "type": "git",
@@ -19,6 +20,7 @@
   },
   "homepage": "https://github.com/h-matsushita14/shizai-tanaoroshi#readme",
   "devDependencies": {
+    "@google/clasp": "^3.1.0",
     "@types/google-apps-script": "^2.0.5",
     "@types/node": "^24.7.2",
     "typescript": "^5.9.3"

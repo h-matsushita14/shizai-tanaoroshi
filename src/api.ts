@@ -1,45 +1,13 @@
-import {
-  getInventoryRecordsJson,
-  exportInventoryRecordsCsv,
-  exportInventoryRecordsExcel,
-  exportInventoryRecordsPdf,
-} from './inventory.js';
-import {
-  getLocations,
-  getLocationsMaster,
-  addLocation,
-  editLocation,
-  deleteLocation,
-} from './locations.js';
-import {
-  getProductsByLocation,
-  addLocationProduct,
-  deleteLocationProduct,
-} from './mappings.js';
-import {
-  getProducts,
-  addProduct,
-  editProduct,
-  deleteProduct,
-} from './products.js';
-import {
-  getSuppliers,
-  addSupplier,
-  editSupplier,
-  deleteSupplier,
-} from './suppliers.js';
-import { setupInventoryAppSheets } from './setup.js';
-
 // CORS preflight request handler
 function doOptions(e) {
-  return global.ContentService.createTextOutput()
+  return (ContentService.createTextOutput() as any)
     .addHeader("Access-Control-Allow-Origin", "https://shizai-tanaoroshi.netlify.app")
     .addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     .addHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
 // Web App entry points
-function doGet(e) {
+function doGet(e: GoogleAppsScript.Events.DoGet) {
   Logger.log("リクエスト受信 (GET): " + JSON.stringify(e));
 
   const action = e.parameter.action;
@@ -73,8 +41,8 @@ function doGet(e) {
         break;
       case 'exportInventoryRecordsCsv':
         payload = exportInventoryRecordsCsv(year, month);
-        return global.ContentService.createTextOutput(payload)
-          .setMimeType(global.ContentService.MimeType.TEXT)
+        return (ContentService.createTextOutput(payload) as any)
+          .setMimeType(ContentService.MimeType.TEXT)
           .addHeader("Access-Control-Allow-Origin", "https://shizai-tanaoroshi.netlify.app");
       case 'exportInventoryRecordsExcel':
         payload = exportInventoryRecordsExcel(year, month);
@@ -88,26 +56,26 @@ function doGet(e) {
 
     const response = {
       status: 'success',
-      version: 'Code.js v5.2 (webpack)',
+      version: 'shizai-tanaoroshi-gas-ts v1.0',
       data: payload,
     };
-    return global.ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(global.ContentService.MimeType.JSON)
+    return (ContentService.createTextOutput(JSON.stringify(response)) as any)
+      .setMimeType(ContentService.MimeType.JSON)
       .addHeader("Access-Control-Allow-Origin", "https://shizai-tanaoroshi.netlify.app");
   } catch (error) {
     Logger.log("エラー発生 (GET): " + error.message);
     const errorResponse = {
       status: 'error',
-      version: 'Code.js v5.2 (webpack)',
-      message: error.message,
+      version: 'shizai-tanaoroshi-gas-ts v1.0',
+      message: (error as Error).message,
     };
-    return global.ContentService.createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(global.ContentService.MimeType.JSON)
+    return (ContentService.createTextOutput(JSON.stringify(errorResponse)) as any)
+      .setMimeType(ContentService.MimeType.JSON)
       .addHeader("Access-Control-Allow-Origin", "https://shizai-tanaoroshi.netlify.app");
   }
 }
 
-function doPost(e) {
+function doPost(e: GoogleAppsScript.Events.DoPost) {
   Logger.log("リクエスト受信 (POST): " + JSON.stringify(e));
 
   const action = e.parameter.action;
@@ -156,27 +124,21 @@ function doPost(e) {
 
     const response = {
       status: 'success',
-      version: 'Code.js v5.2 (webpack)',
+      version: 'shizai-tanaoroshi-gas-ts v1.0',
       data: payload,
     };
-    return global.ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(global.ContentService.MimeType.JSON)
+    return (ContentService.createTextOutput(JSON.stringify(response)) as any)
+      .setMimeType(ContentService.MimeType.JSON)
       .addHeader("Access-Control-Allow-Origin", "https://shizai-tanaoroshi.netlify.app");
   } catch (error) {
     Logger.log("エラー発生 (POST): " + error.message);
     const errorResponse = {
       status: 'error',
-      version: 'Code.js v5.2 (webpack)',
-      message: error.message,
+      version: 'shizai-tanaoroshi-gas-ts v1.0',
+      message: (error as Error).message,
     };
-    return global.ContentService.createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(global.ContentService.MimeType.JSON)
+    return (ContentService.createTextOutput(JSON.stringify(errorResponse)) as any)
+      .setMimeType(ContentService.MimeType.JSON)
       .addHeader("Access-Control-Allow-Origin", "https://shizai-tanaoroshi.netlify.app");
   }
 }
-
-// Expose functions to global scope for Google Apps Script
-global.doGet = doGet;
-global.doPost = doPost;
-global.doOptions = doOptions;
-global.setupInventoryAppSheets = setupInventoryAppSheets;
