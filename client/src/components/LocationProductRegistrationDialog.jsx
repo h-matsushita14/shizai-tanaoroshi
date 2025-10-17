@@ -7,7 +7,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
 function LocationProductRegistrationDialog({
   open, onClose, locationId, locationName, onProductListUpdated
