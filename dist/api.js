@@ -1,17 +1,14 @@
-// ========================================
-// CORS対応
-// ========================================
-// SPREADSHEET_IDはconfig.gsで定義されています
-// ========================================
 function doOptions(e) {
-    return ContentService.createTextOutput('')
-        .setMimeType(ContentService.MimeType.TEXT);
+    return ContentService.createTextOutput()
+        .addHeader('Access-Control-Allow-Origin', 'https://shizai-tanaoroshi.netlify.app')
+        .addHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        .addHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
-// ========================================
 // GET リクエストハンドラ
-// ========================================
 function doGet(e) {
     Logger.log("リクエスト受信 (GET): " + JSON.stringify(e));
+    let responsePayload;
+    const callback = e.parameter.callback;
     try {
         const action = e.parameter.action;
         const year = e.parameter.year ? parseInt(e.parameter.year, 10) : null;
@@ -65,38 +62,39 @@ function doGet(e) {
             default:
                 throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=getLocations)");
         }
-        const response = {
+        responsePayload = {
             status: 'success',
             version: 'shizai-tanaoroshi-gas-ts v1.0',
             data: payload
         };
-        return ContentService.createTextOutput(JSON.stringify(response))
-            .setMimeType(ContentService.MimeType.JSON);
     }
     catch (error) {
         Logger.log("エラー発生 (GET): " + error.message);
         Logger.log("スタックトレース: " + error.stack);
-        const errorResponse = {
+        responsePayload = {
             status: 'error',
             version: 'shizai-tanaoroshi-gas-ts v1.0',
             message: error.message
         };
-        return ContentService.createTextOutput(JSON.stringify(errorResponse))
+    }
+    if (callback) {
+        return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
+            .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    else {
+        return ContentService.createTextOutput(JSON.stringify(responsePayload))
             .setMimeType(ContentService.MimeType.JSON);
     }
 }
-// ========================================
 // POST リクエストハンドラ
-// ========================================
 function doPost(e) {
     Logger.log("リクエスト受信 (POST): " + JSON.stringify(e));
+    let responsePayload;
     try {
-        // actionはクエリパラメータから取得
         const action = e.parameter.action;
         if (!action) {
             throw new Error("'action'パラメータが指定されていません。");
         }
-        // リクエストボディをパース
         let requestBody = {};
         if (e.postData && e.postData.contents) {
             try {
@@ -154,28 +152,26 @@ function doPost(e) {
                 payload = deleteLocationProduct(requestBody.locationId, requestBody.productCode);
                 break;
             case 'addInventoryRecord':
-                payload = addInventoryRecord(requestBody);
+                payload = addInventoryRecords(requestBody);
                 break;
             default:
                 throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=addProduct)");
         }
-        const response = {
+        responsePayload = {
             status: 'success',
             version: 'shizai-tanaoroshi-gas-ts v1.0',
             data: payload
         };
-        return ContentService.createTextOutput(JSON.stringify(response))
-            .setMimeType(ContentService.MimeType.JSON);
     }
     catch (error) {
         Logger.log("エラー発生 (POST): " + error.message);
         Logger.log("スタックトレース: " + error.stack);
-        const errorResponse = {
+        responsePayload = {
             status: 'error',
             version: 'shizai-tanaoroshi-gas-ts v1.0',
             message: error.message
         };
-        return ContentService.createTextOutput(JSON.stringify(errorResponse))
-            .setMimeType(ContentService.MimeType.JSON);
     }
+    return ContentService.createTextOutput(JSON.stringify(responsePayload))
+        .setMimeType(ContentService.MimeType.JSON);
 }

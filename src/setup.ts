@@ -6,7 +6,6 @@
  * 3. Location_Master (ロケーションマスター)
  * 4. Inventory_Records (棚卸記録) - 「記録時単価」を追加し、過去の金額を固定
  * 5. Cost_Calculation (金額算出) - 自動計算用
- * 6. Stock_Summary (在庫サマリー) - VIEW用
  */
 function setupInventoryAppSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -50,15 +49,6 @@ function setupInventoryAppSheets() {
       formulaSheet: true,
       description: "記録データから金額を自動算出"
     },
-    { 
-      name: "Stock_Summary", 
-      headers: [
-        "ロケーションID", "保管場所", "詳細①", "詳細②", 
-        "商品ID", "商品名", "棚卸数量", "記録日時"
-      ],
-      summarySheet: true, // 新しいフラグ
-      description: "ロケーションと商品名、数量を結合した全記録ビュー（棚卸ヒント用）"
-    },
     {
       name: "Location_Product_Mapping",
       headers: ["ロケーションID", "商品コード"],
@@ -89,11 +79,6 @@ function setupInventoryAppSheets() {
     // 金額算出シートに計算式を設定 (自動計算)
     if (config.formulaSheet) {
       setCalculationFormulas(sheet);
-    }
-    
-    // 在庫サマリーシートに結合式を設定 (VIEW)
-    if (config.summarySheet) {
-      setSummaryViewFormula(sheet);
     }
     
     // 見やすくするために列幅を調整
@@ -151,38 +136,4 @@ function setCalculationFormulas(sheet) {
   
   // 金額列のフォーマットを調整
   sheet.getRange("D:E").setNumberFormat("¥#,##0");
-}
-
-/**
- * 在庫サマリーシートに、棚卸記録、商品マスター、ロケーションマスターを結合する
- * VIEW（SQLライクなQUERY関数）を設定する。
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Stock_Summaryシートオブジェクト
- */
-function setSummaryViewFormula(sheet) {
-  // Inventory_Records (A: 記録日時, B: 商品コード, C: ロケーションID, D: ロット数量, E: ロット単位, F: バラ数量, G: バラ単位, H: 記録時単価)
-  // Product_Master (A: 商品コード, C: 商品名, H: ケース入数)
-  // Location_Master (A: ロケーションID, B: 保管場所, C: 詳細①, D: 備考)
-  
-  // QUERY関数を使って、Inventory_Recordsに、ロケーション情報と商品名を結合する
-  // 目的: ロケーション ID, 保管場所, 詳細①, 商品ID, 商品名, 棚卸数量 (合計), 記録日時
-  const queryFormula = 
-    '=ARRAYFORMULA(' +
-      'QUERY({' +
-        'Inventory_Records!C2:C, ' + // Col1: ロケーションID (Inventory)
-        'IFERROR(VLOOKUP(Inventory_Records!C2:C, Location_Master!A:C, {2, 3}, FALSE), {"", ""}), ' + // Col2-3: 保管場所, 詳細1 (Location Master VLOOKUP)
-        'Inventory_Records!B2:B, ' + // Col4: 商品ID (Inventory)
-        'IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:C, 3, FALSE), ""), ' + // Col5: 商品名 (Product Master VLOOKUP)
-        '(N(Inventory_Records!D2:D) * IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:H, 8, FALSE), 0)) + N(Inventory_Records!F2:F), ' + // Col6: 棚卸数量 (合計) = (ロット数量 * ケース入数) + バラ数量
-        'Inventory_Records!A2:A ' + // Col7: 記録日時 (Inventory)
-      '}, ' +
-      '"SELECT Col1, Col2, Col3, Col4, Col5, Col6, Col7 WHERE Col1 IS NOT NULL ORDER BY Col7 DESC", 0)' +
-    ')';
-
-  sheet.getRange("A2").setFormula(queryFormula);
-  
-  // 日時列のフォーマットを調整
-  sheet.getRange("G:G").setNumberFormat("yyyy/MM/dd HH:mm"); // 日時列がG列に移動
-  
-  // 列幅を再調整
-  sheet.autoResizeColumns(1, 7); // 列数が7に減少
 }
