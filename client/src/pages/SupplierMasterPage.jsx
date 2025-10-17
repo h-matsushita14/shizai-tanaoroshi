@@ -49,13 +49,16 @@ function SupplierMasterPage() {
   };
 
   // .envからGASウェブアプリのURLを取得
-  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
   // 仕入れ先データをGASから取得する関数
   const fetchSuppliers = async () => {
     setLoading(true); // データ取得開始時にローディングをtrueに
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=getSuppliers`);
+      const response = await fetch(`${GAS_WEB_APP_URL}?action=getSuppliers`, {
+        mode: 'cors',
+        credentials: 'include',
+      });
       const data = await response.json();
       if (data.status === 'success') {
         // 各仕入先に一意のIDを付与（DataGridの要件に合わせる）
@@ -128,6 +131,8 @@ function SupplierMasterPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ supplierId }), // GAS側でsupplierIdを直接受け取る
+          mode: 'cors',
+          credentials: 'include',
         });
         const data = await response.json();
         if (data.status === 'success') {
@@ -199,6 +204,8 @@ function SupplierMasterPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(updatedData),
+          mode: 'cors',
+          credentials: 'include',
         });
         const data = await response.json();
         if (data.status === 'success') {
@@ -216,6 +223,8 @@ function SupplierMasterPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(supplierData),
+          mode: 'cors',
+          credentials: 'include',
         });
         const data = await response.json();
         if (data.status === 'success') {

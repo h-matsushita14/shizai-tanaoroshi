@@ -98,13 +98,15 @@ function AddProductDialog({ open, handleClose, onProductAdded, products, supplie
     }
 
     try {
-      const scriptUrl = import.meta.env.VITE_GAS_WEB_APP_URL;
+      const scriptUrl = import.meta.env.VITE_GAS_API_URL;
       const response = await fetch(`${scriptUrl}?action=addProduct`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        mode: 'cors',
+        credentials: 'include',
       });
 
       if (!response.ok) {

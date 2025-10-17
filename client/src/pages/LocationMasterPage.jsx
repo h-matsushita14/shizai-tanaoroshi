@@ -57,7 +57,7 @@ function LocationMasterPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // .envからGASウェブアプリのURLを取得
-  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
   useEffect(() => {
     fetchLocations();
@@ -67,7 +67,10 @@ function LocationMasterPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=getLocationsMaster`); // 新しいGASアクションを想定
+      const response = await fetch(`${GAS_WEB_APP_URL}?action=getLocationsMaster`, {
+        mode: 'cors',
+        credentials: 'include',
+      }); // 新しいGASアクションを想定
       const result = await response.json();
       if (result.status === 'success') {
         const locationsWithId = result.data.map((loc, index) => ({
@@ -162,6 +165,8 @@ function LocationMasterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        mode: 'cors',
+        credentials: 'include',
       });
       const result = await response.json();
       if (result.status === 'success') {
@@ -192,6 +197,8 @@ function LocationMasterPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ locationId: editingLocation["ロケーションID"] }),
+          mode: 'cors',
+          credentials: 'include',
         });
         const result = await response.json();
         if (result.status === 'success') {

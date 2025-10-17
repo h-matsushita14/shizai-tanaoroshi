@@ -163,3 +163,78 @@ function exportInventoryRecordsPdf(year, month) {
     const file = folder.createFile(pdfBlob);
     return file.getUrl();
 }
+/**
+ * Inventory_Recordsシートに新しい棚卸記録を追加する
+ * @param {object} recordData - 追加する棚卸記録データ
+ * @param {string} recordData.productCode - 商品コード
+ * @param {string} recordData.locationId - ロケーションID
+ * @param {number} recordData.lotQuantity - ロット数量
+ * @param {string} recordData.lotUnit - ロット単位
+ * @param {number} recordData.pieceQuantity - バラ数量
+ * @param {string} recordData.pieceUnit - バラ単位
+ * @param {string} recordData.recordedBy - 記録者
+ * @param {string} [recordData.notes] - 備考
+ * @returns {object} 追加された記録データとメッセージ
+ */
+function addInventoryRecord(recordData) {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const inventorySheet = ss.getSheetByName("Inventory_Records");
+    if (!inventorySheet)
+        throw new Error("Inventory_Recordsシートが見つかりません。");
+    const productSheet = ss.getSheetByName("Product_Master");
+    if (!productSheet)
+        throw new Error("Product_Masterシートが見つかりません。");
+    const inventoryHeaders = inventorySheet.getRange(1, 1, 1, inventorySheet.getLastColumn()).getValues()[0];
+    const productHeaders = productSheet.getRange(1, 1, 1, productSheet.getLastColumn()).getValues()[0];
+    const productCodeColIndex = productHeaders.indexOf("商品コード");
+    const unitPriceColIndex = productHeaders.indexOf("単価");
+    if (productCodeColIndex === -1 || unitPriceColIndex === -1) {
+        throw new Error("Product_Masterシートに'商品コード'または'単価'カラムが見つかりません。");
+    }
+    // 商品マスターから記録時単価を取得
+    const productData = productSheet.getDataRange().getValues();
+    const productRow = productData.find(row => row[productCodeColIndex] === recordData.productCode);
+    if (!productRow) {
+        throw new Error(`商品コード '${recordData.productCode}' がProduct_Masterに見つかりません。`);
+    }
+    const recordedUnitPrice = productRow[unitPriceColIndex];
+    const newRow = [];
+    inventoryHeaders.forEach(header => {
+        switch (header) {
+            case "記録日時":
+                newRow.push(new Date());
+                break;
+            case "商品コード":
+                newRow.push(recordData.productCode);
+                break;
+            case "ロケーションID":
+                newRow.push(recordData.locationId);
+                break;
+            case "ロット数量":
+                newRow.push(recordData.lotQuantity);
+                break;
+            case "ロット単位":
+                newRow.push(recordData.lotUnit);
+                break;
+            case "バラ数量":
+                newRow.push(recordData.pieceQuantity);
+                break;
+            case "バラ単位":
+                newRow.push(recordData.pieceUnit);
+                break;
+            case "記録時単価":
+                newRow.push(recordedUnitPrice);
+                break;
+            case "担当者":
+                newRow.push(recordData.recordedBy);
+                break;
+            case "備考":
+                newRow.push(recordData.notes || "");
+                break;
+            default:
+                newRow.push(""); // 未知のヘッダーは空欄
+        }
+    });
+    inventorySheet.appendRow(newRow);
+    return { message: "棚卸記録が正常に追加されました。", record: recordData };
+}

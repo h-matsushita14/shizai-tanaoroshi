@@ -54,7 +54,7 @@ function ProductMasterPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md')); // md以下の画面サイズでtrue
 
   // .envからGASウェブアプリのURLを取得
-  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
   useEffect(() => {
     fetchProducts();
@@ -66,7 +66,10 @@ function ProductMasterPage() {
     setError(null);
     try {
       const fullUrl = `${GAS_WEB_APP_URL}?action=getProducts`;
-      const response = await fetch(fullUrl);
+      const response = await fetch(fullUrl, {
+        mode: 'cors',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -97,7 +100,10 @@ function ProductMasterPage() {
   const fetchSuppliers = async () => {
     try {
       const fullUrl = `${GAS_WEB_APP_URL}?action=getSuppliers`;
-      const response = await fetch(fullUrl);
+      const response = await fetch(fullUrl, {
+        mode: 'cors',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
