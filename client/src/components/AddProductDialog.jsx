@@ -106,7 +106,6 @@ function AddProductDialog({ open, handleClose, onProductAdded, products, supplie
         },
         body: JSON.stringify(formData),
         mode: 'cors',
-        credentials: 'include',
       });
 
       if (!response.ok) {

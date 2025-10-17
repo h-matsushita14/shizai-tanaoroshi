@@ -57,7 +57,6 @@ function SupplierMasterPage() {
     try {
       const response = await fetch(`${GAS_WEB_APP_URL}?action=getSuppliers`, {
         mode: 'cors',
-        credentials: 'include',
       });
       const data = await response.json();
       if (data.status === 'success') {
@@ -132,7 +131,6 @@ function SupplierMasterPage() {
           },
           body: JSON.stringify({ supplierId }), // GAS側でsupplierIdを直接受け取る
           mode: 'cors',
-          credentials: 'include',
         });
         const data = await response.json();
         if (data.status === 'success') {
@@ -205,7 +203,6 @@ function SupplierMasterPage() {
           },
           body: JSON.stringify(updatedData),
           mode: 'cors',
-          credentials: 'include',
         });
         const data = await response.json();
         if (data.status === 'success') {
@@ -224,7 +221,6 @@ function SupplierMasterPage() {
           },
           body: JSON.stringify(supplierData),
           mode: 'cors',
-          credentials: 'include',
         });
         const data = await response.json();
         if (data.status === 'success') {

@@ -69,7 +69,6 @@ function LocationMasterPage() {
     try {
       const response = await fetch(`${GAS_WEB_APP_URL}?action=getLocationsMaster`, {
         mode: 'cors',
-        credentials: 'include',
       }); // 新しいGASアクションを想定
       const result = await response.json();
       if (result.status === 'success') {
@@ -166,7 +165,6 @@ function LocationMasterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
         mode: 'cors',
-        credentials: 'include',
       });
       const result = await response.json();
       if (result.status === 'success') {
@@ -198,7 +196,6 @@ function LocationMasterPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ locationId: editingLocation["ロケーションID"] }),
           mode: 'cors',
-          credentials: 'include',
         });
         const result = await response.json();
         if (result.status === 'success') {

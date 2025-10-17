@@ -117,7 +117,6 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
         },
         body: JSON.stringify(formData),
         mode: 'cors',
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -157,7 +156,6 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
           },
           body: JSON.stringify({ "商品コード": product["商品コード"] }),
           mode: 'cors',
-          credentials: 'include',
         });
 
         if (!response.ok) {

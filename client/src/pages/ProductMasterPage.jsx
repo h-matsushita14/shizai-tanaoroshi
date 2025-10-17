@@ -68,7 +68,6 @@ function ProductMasterPage() {
       const fullUrl = `${GAS_WEB_APP_URL}?action=getProducts`;
       const response = await fetch(fullUrl, {
         mode: 'cors',
-        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -102,7 +101,6 @@ function ProductMasterPage() {
       const fullUrl = `${GAS_WEB_APP_URL}?action=getSuppliers`;
       const response = await fetch(fullUrl, {
         mode: 'cors',
-        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
