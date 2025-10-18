@@ -17,15 +17,20 @@ exports.handler = async (event, context) => {
   console.log('GAS_PROXY: headers:', headers);
   console.log('GAS_PROXY: body:', body);
 
+  const fetchOptions = {
+    method: httpMethod,
+    headers: {
+      'Content-Type': headers['content-type'] || 'application/json',
+      // 必要に応じて他のヘッダーも転送
+    },
+  };
+
+  if (httpMethod === 'POST') {
+    fetchOptions.body = body;
+  }
+
   try {
-    const response = await fetch(targetUrl, {
-      method: httpMethod,
-      headers: {
-        'Content-Type': headers['content-type'] || 'application/json',
-        // 必要に応じて他のヘッダーも転送
-      },
-      body: body, // POSTリクエストの場合
-    });
+    const response = await fetch(targetUrl, fetchOptions);
 
     console.log('GAS_PROXY: Response status:', response.status);
     
