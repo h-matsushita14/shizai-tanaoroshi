@@ -1,11 +1,15 @@
 // netlify/functions/gas-proxy.js
 exports.handler = async (event, context) => {
   const gasUrl = process.env.VITE_GAS_API_URL; // Netlifyの環境変数からGASのURLを取得
-  const { path, httpMethod, headers, body } = event;
+  const { path, httpMethod, headers, body, queryStringParameters } = event; // Add queryStringParameters
 
-  // GASへのパスを構築 (例: /api/gas/someAction -> GAS_URL)
-  // ここではシンプルにGAS_URLに転送
-  const targetUrl = gasUrl; 
+  let targetUrl = gasUrl;
+
+  // If it's a GET request and there are query parameters, append them to the targetUrl
+  if (httpMethod === 'GET' && queryStringParameters) {
+    const queryString = new URLSearchParams(queryStringParameters).toString();
+    targetUrl = `${gasUrl}?${queryString}`;
+  }
 
   try {
     const response = await fetch(targetUrl, {
