@@ -36,44 +36,6 @@ interface LocationMasterData {
   [key: string]: string | number;
 }
 
-// 型定義
-type InventoryStatus = 'recorded' | 'unrecorded';
-
-interface ProductInventory {
-  商品コード: string;
-  商品名: string;
-  棚卸数量: number;
-  記録日時: Date;
-}
-
-interface LocationDetail {
-  id: string;
-  name: string;
-  inventoryStatus: InventoryStatus;
-  products?: ProductInventory[]; // 製品情報を追加
-}
-
-interface StorageArea {
-  id: string;
-  name: string;
-  details: LocationDetail[];
-  inventoryStatus: InventoryStatus;
-  products?: ProductInventory[]; // 製品情報を追加
-}
-
-interface CategoryGroup {
-  category: string;
-  storageAreas: { [name: string]: StorageArea };
-}
-
-interface Hierarchy {
-  [category: string]: CategoryGroup;
-}
-
-interface LocationMasterData {
-  [key: string]: string | number;
-}
-
 function getLocations() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const locationSheet = ss.getSheetByName("Location_Master");

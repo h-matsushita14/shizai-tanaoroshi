@@ -6,23 +6,83 @@ function getLocations() {
     const inventorySheet = ss.getSheetByName("Inventory_Records");
     if (!inventorySheet)
         throw new Error("Inventory_Recordsシートが見つかりません。");
-    // --- 棚卸記録の取得と処理 ---
+    const locationProductMappingSheet = ss.getSheetByName("Location_Product_Mapping");
+    if (!locationProductMappingSheet)
+        throw new Error("Location_Product_Mappingシートが見つかりません。");
+    const productMasterSheet = ss.getSheetByName("Product_Master");
+    if (!productMasterSheet)
+        throw new Error("Product_Masterシートが見つかりません。");
+    // --- Product_Masterから商品情報を取得 ---
+    const productMasterData = productMasterSheet.getDataRange().getValues();
+    const productMasterHeaders = productMasterData.shift() || [];
+    const pmProductCodeIndex = productMasterHeaders.indexOf("商品コード");
+    const pmProductNameIndex = productMasterHeaders.indexOf("商品名");
+    if (pmProductCodeIndex === -1 || pmProductNameIndex === -1) {
+        throw new Error("Product_Masterシートに必要なカラム（商品コード, 商品名）が見つかりません。");
+    }
+    const productMasterMap = new Map();
+    productMasterData.forEach(row => {
+        const productCode = String(row[pmProductCodeIndex]);
+        const productName = String(row[pmProductNameIndex]);
+        productMasterMap.set(productCode, { 商品名: productName });
+    });
+    // --- Location_Product_Mappingからロケーションと商品の紐付けを取得 ---
+    const locationProductMappingData = locationProductMappingSheet.getDataRange().getValues();
+    const locationProductMappingHeaders = locationProductMappingData.shift() || [];
+    const lpmLocationIdIndex = locationProductMappingHeaders.indexOf("ロケーションID");
+    const lpmProductCodeIndex = locationProductMappingHeaders.indexOf("商品コード");
+    if (lpmLocationIdIndex === -1 || lpmProductCodeIndex === -1) {
+        throw new Error("Location_Product_Mappingシートに必要なカラム（ロケーションID, 商品コード）が見つかりません。");
+    }
+    const locationProductMap = new Map(); // Map<locationId, productCode[]>
+    locationProductMappingData.forEach(row => {
+        const locationId = String(row[lpmLocationIdIndex]);
+        const productCode = String(row[lpmProductCodeIndex]);
+        if (!locationProductMap.has(locationId)) {
+            locationProductMap.set(locationId, []);
+        }
+        locationProductMap.get(locationId)?.push(productCode);
+    });
+    // --- Inventory_Recordsから最新の棚卸記録を取得と処理 ---
     const inventoryData = inventorySheet.getDataRange().getValues();
     const inventoryHeaders = inventoryData.shift() || [];
     const invLocationIdIndex = inventoryHeaders.indexOf("ロケーションID");
     const invTimestampIndex = inventoryHeaders.indexOf("記録日時");
-    if (invLocationIdIndex === -1 || invTimestampIndex === -1) {
-        throw new Error("Inventory_Recordsシートに必要なカラム（ロケーションID, 記録日時）が見つかりません。");
+    const invProductCodeIndex = inventoryHeaders.indexOf("商品コード");
+    const invLotQuantityIndex = inventoryHeaders.indexOf("ロット数量");
+    const invLooseQuantityIndex = inventoryHeaders.indexOf("バラ数量");
+    if (invLocationIdIndex === -1 || invTimestampIndex === -1 || invProductCodeIndex === -1 || invLotQuantityIndex === -1 || invLooseQuantityIndex === -1) {
+        throw new Error("Inventory_Recordsシートに必要なカラム（ロケーションID, 記録日時, 商品コード, ロット数量, バラ数量）が見つかりません。");
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const recordedLocationIds = new Set();
+    const latestProductInventoryMap = new Map(); // Map<locationId, Map<productCode, ProductInventory>>
     inventoryData.forEach(row => {
+        const locationId = String(row[invLocationIdIndex]);
         const timestamp = new Date(row[invTimestampIndex]);
+        const productCode = String(row[invProductCodeIndex]);
+        const lotQuantity = typeof row[invLotQuantityIndex] === 'number' ? row[invLotQuantityIndex] : 0;
+        const looseQuantity = typeof row[invLooseQuantityIndex] === 'number' ? row[invLooseQuantityIndex] : 0;
+        const productName = productMasterMap.get(productCode)?.商品名 || productCode; // Product_Masterから商品名を取得
+        const currentProductInventory = {
+            商品コード: productCode,
+            商品名: productName,
+            棚卸数量: lotQuantity + looseQuantity,
+            記録日時: timestamp,
+        };
         if (timestamp >= today && timestamp < tomorrow) {
-            recordedLocationIds.add(row[invLocationIdIndex]);
+            recordedLocationIds.add(locationId);
+        }
+        if (!latestProductInventoryMap.has(locationId)) {
+            latestProductInventoryMap.set(locationId, new Map());
+        }
+        const productsInLocation = latestProductInventoryMap.get(locationId);
+        const existingProduct = productsInLocation.get(productCode);
+        if (!existingProduct || existingProduct.記録日時 < currentProductInventory.記録日時) {
+            productsInLocation.set(productCode, currentProductInventory);
         }
     });
     // --- ロケーションマスターの取得と処理 ---
@@ -44,10 +104,10 @@ function getLocations() {
     });
     const hierarchy = {};
     locationData.forEach(row => {
-        const id = row[idIndex];
-        const category = row[categoryIndex];
-        const storageArea = row[storageAreaIndex];
-        const detail = row[detailIndex];
+        const id = String(row[idIndex]);
+        const category = String(row[categoryIndex]);
+        const storageArea = String(row[storageAreaIndex]);
+        const detail = String(row[detailIndex]);
         const status = recordedLocationIds.has(id) ? 'recorded' : 'unrecorded';
         if (!category)
             return;
@@ -64,13 +124,51 @@ function getLocations() {
                     id: id,
                     name: storageArea,
                     details: [],
-                    inventoryStatus: areaStatus
+                    inventoryStatus: areaStatus,
+                    products: [] // 初期化
                 };
             }
             if (detail) {
-                hierarchy[category].storageAreas[storageArea].details.push({ id: id, name: detail, inventoryStatus: status });
+                hierarchy[category].storageAreas[storageArea].details.push({
+                    id: id,
+                    name: detail,
+                    inventoryStatus: status,
+                    products: [] // 初期化
+                });
             }
         }
+    });
+    // ロケーションに紐づく製品情報を追加
+    Object.values(hierarchy).forEach(categoryGroup => {
+        Object.values(categoryGroup.storageAreas).forEach(area => {
+            const locationIdsToProcess = [area.id, ...area.details.map(d => d.id)];
+            locationIdsToProcess.forEach(locationId => {
+                const productCodesForLocation = locationProductMap.get(locationId) || [];
+                const productsForLocation = [];
+                productCodesForLocation.forEach(productCode => {
+                    const productMaster = productMasterMap.get(productCode);
+                    const latestInventory = latestProductInventoryMap.get(locationId)?.get(productCode);
+                    if (productMaster) {
+                        productsForLocation.push({
+                            商品コード: productCode,
+                            商品名: productMaster.商品名,
+                            棚卸数量: latestInventory?.棚卸数量 || 0,
+                            記録日時: latestInventory?.記録日時 || new Date(0), // デフォルト値
+                        });
+                    }
+                });
+                // productsを適切な場所に追加
+                if (area.id === locationId) {
+                    area.products = productsForLocation;
+                }
+                else {
+                    const detail = area.details.find(d => d.id === locationId);
+                    if (detail) {
+                        detail.products = productsForLocation;
+                    }
+                }
+            });
+        });
     });
     const result = Object.values(hierarchy).map((categoryGroup) => {
         const storageAreas = Object.values(categoryGroup.storageAreas);
