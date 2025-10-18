@@ -1,7 +1,7 @@
 [build]
   command = "vite build"
   publish = "dist"
-  functions = "netlify/functions" # Functionsのディレクトリを指定
+  functions = "client/netlify/functions" # ここを修正
 
 [dev]
   command = "vite"
