@@ -42,11 +42,6 @@ function LocationPage() {
 
   useEffect(() => {
     const fetchLocations = async () => {
-      if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        setError('GASのウェブアプリURLが設定されていません。');
-        setLoading(false);
-        return;
-      }
       try {
         const result = await sendGetRequest('getLocations'); // 変更
 
