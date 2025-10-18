@@ -9,6 +9,72 @@ function doOptions(e: any) {
 }
 
 /**
+ * 全てのマスターデータを取得する
+ */
+function getMasterData() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  // Product_Master
+  const productSheet = ss.getSheetByName("Product_Master");
+  if (!productSheet) throw new Error("Product_Masterシートが見つかりません。");
+  const productData = productSheet.getDataRange().getValues();
+  const productHeaders = productData.shift() || [];
+  const products = productData.map(row => {
+    const product: { [key: string]: any } = {};
+    productHeaders.forEach((header, index) => {
+      product[header] = row[index];
+    });
+    return product;
+  });
+
+  // Supplier_Master
+  const supplierSheet = ss.getSheetByName("Supplier_Master");
+  if (!supplierSheet) throw new Error("Supplier_Masterシートが見つかりません。");
+  const supplierData = supplierSheet.getDataRange().getValues();
+  const supplierHeaders = supplierData.shift() || [];
+  const suppliers = supplierData.map(row => {
+    const supplier: { [key: string]: any } = {};
+    supplierHeaders.forEach((header, index) => {
+      supplier[header] = row[index];
+    });
+    return supplier;
+  });
+
+  // Location_Master
+  const locationMasterSheet = ss.getSheetByName("Location_Master");
+  if (!locationMasterSheet) throw new Error("Location_Masterシートが見つかりません。");
+  const locationMasterData = locationMasterSheet.getDataRange().getValues();
+  const locationMasterHeaders = locationMasterData.shift() || [];
+  const locationsMaster = locationMasterData.map(row => {
+    const location: { [key: string]: any } = {};
+    locationMasterHeaders.forEach((header, index) => {
+      location[header] = row[index];
+    });
+    return location;
+  });
+
+  // Location_Product_Mapping
+  const lpmSheet = ss.getSheetByName("Location_Product_Mapping");
+  if (!lpmSheet) throw new Error("Location_Product_Mappingシートが見つかりません。");
+  const lpmData = lpmSheet.getDataRange().getValues();
+  const lpmHeaders = lpmData.shift() || [];
+  const locationProductMappings = lpmData.map(row => {
+    const mapping: { [key: string]: any } = {};
+    lpmHeaders.forEach((header, index) => {
+      mapping[header] = row[index];
+    });
+    return mapping;
+  });
+
+  return {
+    products,
+    suppliers,
+    locationsMaster,
+    locationProductMappings,
+  };
+}
+
+/**
  * GETリクエストハンドラ
  * GETの場合はactionをクエリパラメータで受け取る
  */
@@ -33,6 +99,9 @@ function doGet(e: GoogleAppsScript.Events.DoGet) {
     switch (action) {
       case 'getLocations':
         payload = getLocations();
+        break;
+      case 'getMasterData': // 新しいアクション
+        payload = getMasterData();
         break;
       case 'getProducts':
         payload = getProducts();
