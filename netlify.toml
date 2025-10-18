@@ -1,7 +1,7 @@
 [build]
   command = "vite build"
   publish = "dist"
-  functions = "netlify/functions" # ここを修正
+  functions = "./netlify/functions" # ここを修正
 
 [dev]
   command = "vite"
