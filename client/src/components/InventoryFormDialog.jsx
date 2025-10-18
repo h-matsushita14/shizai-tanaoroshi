@@ -9,7 +9,7 @@ import AddIcon from '@mui/icons-material/Add'; // AddIcon をインポート
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // InfoOutlinedIcon を追加
 import LocationProductRegistrationDialog from './LocationProductRegistrationDialog'; // 商品登録ダイアログをインポート
 
-import { sendGetRequest, sendPostRequest } from '../api/gas';
+import { sendGetRequest, sendPostRequest } from '@/api/gas';
 
 function InventoryFormDialog({ open, onClose, locationId, locationName, locationDetail }) {
   const [products, setProducts] = useState([]);

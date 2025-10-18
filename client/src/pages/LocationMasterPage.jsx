@@ -9,7 +9,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocationProductRegistrationDialog from '../components/LocationProductRegistrationDialog'; // 追加
 
-import { sendGetRequest, sendPostRequest } from '../api/gas';
+import { sendGetRequest, sendPostRequest } from '@/api/gas';
 
 const LocationCard = ({ location, handleEditClick, handleProductRegistrationClick }) => (
   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

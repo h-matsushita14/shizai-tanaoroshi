@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert, Typography, IconButton, MenuItem, Autocomplete } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-import { sendPostRequest } from '../api/gas';
+import { sendPostRequest } from '@/api/gas';
 
 // 表示するフィールドの順序を定義
 const fieldOrder = [

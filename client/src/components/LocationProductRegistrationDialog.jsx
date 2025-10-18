@@ -7,7 +7,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-import { sendGetRequest, sendPostRequest } from '../api/gas';
+import { sendGetRequest, sendPostRequest } from '@/api/gas';
 
 function LocationProductRegistrationDialog({
   open, onClose, locationId, locationName, onProductListUpdated

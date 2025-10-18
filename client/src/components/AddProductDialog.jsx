@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, MenuItem, CircularProgress, Alert, Autocomplete } from '@mui/material';
 
-import { sendPostRequest } from '../api/gas';
+import { sendPostRequest } from '@/api/gas';
 
 function AddProductDialog({ open, handleClose, onProductAdded, products, suppliers, lotUnits, pieceUnits }) {
   const [formData, setFormData] = useState({
