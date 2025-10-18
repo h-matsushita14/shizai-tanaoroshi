@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// Netlifyデプロイテスト用のコメント
+import React from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Container, IconButton, Box, useTheme, useMediaQuery } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
