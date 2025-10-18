@@ -1,7 +1,7 @@
 [build]
-  command = "vite build"
-  publish = "dist"
-  functions = "./netlify/functions" # ここを修正
+  command = "npm --prefix client run build"
+  publish = "client/dist"
+  functions = "./netlify/functions"
 
 [dev]
   command = "vite"
