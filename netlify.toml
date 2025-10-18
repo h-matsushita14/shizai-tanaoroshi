@@ -1,5 +1,5 @@
 [build]
-  command = "npm --prefix client run build"
+  command = "./client/node_modules/.bin/vite build"
   publish = "client/dist"
   functions = "./netlify/functions"
 
