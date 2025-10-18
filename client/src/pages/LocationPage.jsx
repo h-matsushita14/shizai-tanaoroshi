@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography, Box, List, ListItemButton, ListItemText, CircularProgress,
   Alert, Drawer, Divider, Toolbar,
@@ -40,26 +40,29 @@ function LocationPage() {
     setMobileOpen(!mobileOpen);
   };
 
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const result = await sendGetRequest('getLocations'); // 変更
+  const fetchLocations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await sendGetRequest('getLocations');
 
-        console.log("Response from Google Apps Script:", result);
+      console.log("Response from Google Apps Script:", result);
 
-        if (result.status === 'success') {
-          setLocations(result.data);
-        } else {
-          throw new Error(result.message || 'データの取得に失敗しました。');
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (result.status === 'success') {
+        setLocations(result.data);
+      } else {
+        throw new Error(result.message || 'データの取得に失敗しました。');
       }
-    };
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // 空の依存配列で初回のみ作成
+
+  useEffect(() => {
     fetchLocations();
-  }, []);
+  }, [fetchLocations]); // fetchLocationsを依存配列に追加
 
   useEffect(() => {
     if (!isDesktop) {
