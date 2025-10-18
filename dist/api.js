@@ -1,20 +1,16 @@
 /**
- * 共通CORSヘッダー付与関数
- */
-function withCors(output) {
-    output.setHeader('Access-Control-Allow-Origin', 'https://shizai-tanaoroshi.netlify.app');
-    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return output;
-}
-/**
  * OPTIONSリクエスト (CORSプリフライト)
+ * POSTリクエストの前にブラウザが自動的に送信
  */
 function doOptions(e) {
-    return withCors(ContentService.createTextOutput(''))
+    Logger.log("OPTIONSリクエスト受信: " + JSON.stringify(e));
+    return ContentService.createTextOutput('')
         .setMimeType(ContentService.MimeType.TEXT);
 }
-// GET リクエストハンドラ
+/**
+ * GETリクエストハンドラ
+ * GETの場合はactionをクエリパラメータで受け取る
+ */
 function doGet(e) {
     Logger.log("リクエスト受信 (GET): " + JSON.stringify(e));
     let responsePayload;
@@ -24,6 +20,9 @@ function doGet(e) {
         const year = e.parameter.year ? parseInt(e.parameter.year, 10) : null;
         const month = e.parameter.month ? parseInt(e.parameter.month, 10) : null;
         const locationId = e.parameter.locationId;
+        if (!action) {
+            throw new Error("'action'パラメータが指定されていません。");
+        }
         let payload;
         switch (action) {
             case 'getLocations':
@@ -55,8 +54,8 @@ function doGet(e) {
                     throw new Error("'year'と'month'パラメータが必要です。");
                 }
                 payload = exportInventoryRecordsCsv(year, month);
-                return withCors(ContentService.createTextOutput(payload)
-                    .setMimeType(ContentService.MimeType.TEXT));
+                return ContentService.createTextOutput(payload)
+                    .setMimeType(ContentService.MimeType.TEXT);
             case 'exportInventoryRecordsExcel':
                 if (!year || !month) {
                     throw new Error("'year'と'month'パラメータが必要です。");
@@ -87,27 +86,24 @@ function doGet(e) {
             message: error.message
         };
     }
+    // JSONP対応
     if (callback) {
-        // JSONPはCORSヘッダー不要
         return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
-    else {
-        const response = ContentService.createTextOutput(JSON.stringify(responsePayload))
-            .setMimeType(ContentService.MimeType.JSON);
-        return withCors(response);
-    }
+    return ContentService.createTextOutput(JSON.stringify(responsePayload))
+        .setMimeType(ContentService.MimeType.JSON);
 }
-// POST リクエストハンドラ
+/**
+ * POSTリクエストハンドラ
+ * POSTの場合はactionをリクエストボディで受け取る
+ */
 function doPost(e) {
     Logger.log("リクエスト受信 (POST): " + JSON.stringify(e));
     let responsePayload;
     try {
-        const action = e.parameter.action;
-        if (!action) {
-            throw new Error("'action'パラメータが指定されていません。");
-        }
         let requestBody = {};
+        // リクエストボディからactionとデータを取得
         if (e.postData && e.postData.contents) {
             try {
                 requestBody = JSON.parse(e.postData.contents);
@@ -115,6 +111,11 @@ function doPost(e) {
             catch (parseError) {
                 throw new Error("リクエストボディのJSON解析に失敗しました: " + parseError.message);
             }
+        }
+        // actionはボディから取得（フォールバックとしてクエリパラメータもチェック）
+        const action = requestBody.action || e.parameter.action;
+        if (!action) {
+            throw new Error("'action'パラメータが指定されていません。");
         }
         let payload;
         switch (action) {
@@ -184,7 +185,6 @@ function doPost(e) {
             message: error.message
         };
     }
-    const response = ContentService.createTextOutput(JSON.stringify(responsePayload))
+    return ContentService.createTextOutput(JSON.stringify(responsePayload))
         .setMimeType(ContentService.MimeType.JSON);
-    return withCors(response);
 }

@@ -73,10 +73,10 @@ function LocationProductRegistrationDialog({
 
   const handleAddProductToLocation = async (productCode) => {
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=addLocationProduct`, {
+      const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locationId, productCode }),
+        body: JSON.stringify({ action: 'addLocationProduct', locationId, productCode }),
       });
       const result = await response.json();
       if (result.status === 'success') {
@@ -95,10 +95,10 @@ function LocationProductRegistrationDialog({
   const handleDeleteProductFromLocation = async (productCode) => {
     if (window.confirm(`このロケーションから商品コード: ${productCode} を削除してもよろしいですか？`)) {
       try {
-        const response = await fetch(`${GAS_WEB_APP_URL}?action=deleteLocationProduct`, {
+        const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ locationId, productCode }),
+          body: JSON.stringify({ action: 'deleteLocationProduct', locationId, productCode }),
         });
         const result = await response.json();
         if (result.status === 'success') {

@@ -97,10 +97,10 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
 
     setLoading(true);
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=addInventoryRecord`, {
+      const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records: inventoryData }),
+        body: JSON.stringify({ action: 'addInventoryRecord', records: inventoryData }),
       });
       const result = await response.json();
 

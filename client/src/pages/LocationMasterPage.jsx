@@ -160,10 +160,10 @@ function LocationMasterPage() {
     setError(null);
     try {
       const action = editingLocation ? 'editLocation' : 'addLocation';
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=${action}`, {
+      const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ action, ...formData }),
         mode: 'cors',
       });
       const result = await response.json();
@@ -191,10 +191,10 @@ function LocationMasterPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${GAS_WEB_APP_URL}?action=deleteLocation`, {
+        const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ locationId: editingLocation["ロケーションID"] }),
+          body: JSON.stringify({ action: 'deleteLocation', locationId: editingLocation["ロケーションID"] }),
           mode: 'cors',
         });
         const result = await response.json();

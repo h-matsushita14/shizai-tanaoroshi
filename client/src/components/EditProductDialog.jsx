@@ -110,12 +110,12 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
 
     try {
       const scriptUrl = import.meta.env.VITE_GAS_API_URL;
-      const response = await fetch(`${scriptUrl}?action=editProduct`, {
+      const response = await fetch(scriptUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ action: 'editProduct', ...formData }),
         mode: 'cors',
       });
 
@@ -149,12 +149,12 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
       setError(null);
       try {
         const scriptUrl = import.meta.env.VITE_GAS_WEB_APP_URL;
-        const response = await fetch(`${scriptUrl}?action=deleteProduct`, {
+        const response = await fetch(scriptUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ "商品コード": product["商品コード"] }),
+          body: JSON.stringify({ action: 'deleteProduct', "商品コード": product["商品コード"] }),
           mode: 'cors',
         });
 

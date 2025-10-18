@@ -1,22 +1,17 @@
 /**
- * 共通CORSヘッダー付与関数
- */
-function withCors(output: GoogleAppsScript.Content.TextOutput) {
-  (output as any).setHeader('Access-Control-Allow-Origin', 'https://shizai-tanaoroshi.netlify.app');
-  (output as any).setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  (output as any).setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  return output;
-}
-
-/**
  * OPTIONSリクエスト (CORSプリフライト)
+ * POSTリクエストの前にブラウザが自動的に送信
  */
-function doOptions(e: GoogleAppsScript.Events.DoPost) {
-  return withCors(ContentService.createTextOutput(''))
+function doOptions(e: any) {
+  Logger.log("OPTIONSリクエスト受信: " + JSON.stringify(e));
+  return ContentService.createTextOutput('')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
-// GET リクエストハンドラ
+/**
+ * GETリクエストハンドラ
+ * GETの場合はactionをクエリパラメータで受け取る
+ */
 function doGet(e: GoogleAppsScript.Events.DoGet) {
   Logger.log("リクエスト受信 (GET): " + JSON.stringify(e));
   
@@ -28,6 +23,10 @@ function doGet(e: GoogleAppsScript.Events.DoGet) {
     const year = e.parameter.year ? parseInt(e.parameter.year, 10) : null;
     const month = e.parameter.month ? parseInt(e.parameter.month, 10) : null;
     const locationId = e.parameter.locationId;
+    
+    if (!action) {
+      throw new Error("'action'パラメータが指定されていません。");
+    }
     
     let payload;
     
@@ -61,8 +60,8 @@ function doGet(e: GoogleAppsScript.Events.DoGet) {
           throw new Error("'year'と'month'パラメータが必要です。");
         }
         payload = exportInventoryRecordsCsv(year, month);
-        return withCors(ContentService.createTextOutput(payload)
-          .setMimeType(ContentService.MimeType.TEXT));
+        return ContentService.createTextOutput(payload)
+          .setMimeType(ContentService.MimeType.TEXT);
       case 'exportInventoryRecordsExcel':
         if (!year || !month) {
           throw new Error("'year'と'month'パラメータが必要です。");
@@ -96,37 +95,42 @@ function doGet(e: GoogleAppsScript.Events.DoGet) {
     };
   }
 
+  // JSONP対応
   if (callback) {
-    // JSONPはCORSヘッダー不要
     return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  } else {
-    const response = ContentService.createTextOutput(JSON.stringify(responsePayload))
-      .setMimeType(ContentService.MimeType.JSON);
-    return withCors(response);
   }
+  
+  return ContentService.createTextOutput(JSON.stringify(responsePayload))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-// POST リクエストハンドラ
+/**
+ * POSTリクエストハンドラ
+ * POSTの場合はactionをリクエストボディで受け取る
+ */
 function doPost(e: GoogleAppsScript.Events.DoPost) {
   Logger.log("リクエスト受信 (POST): " + JSON.stringify(e));
   
   let responsePayload;
 
   try {
-    const action = e.parameter.action;
-    
-    if (!action) {
-      throw new Error("'action'パラメータが指定されていません。");
-    }
-    
     let requestBody: any = {};
+    
+    // リクエストボディからactionとデータを取得
     if (e.postData && e.postData.contents) {
       try {
         requestBody = JSON.parse(e.postData.contents);
       } catch (parseError) {
         throw new Error("リクエストボディのJSON解析に失敗しました: " + parseError.message);
       }
+    }
+    
+    // actionはボディから取得（フォールバックとしてクエリパラメータもチェック）
+    const action = requestBody.action || e.parameter.action;
+    
+    if (!action) {
+      throw new Error("'action'パラメータが指定されていません。");
     }
     
     let payload;
@@ -201,7 +205,6 @@ function doPost(e: GoogleAppsScript.Events.DoPost) {
     };
   }
   
-  const response = ContentService.createTextOutput(JSON.stringify(responsePayload))
+  return ContentService.createTextOutput(JSON.stringify(responsePayload))
     .setMimeType(ContentService.MimeType.JSON);
-  return withCors(response);
 }

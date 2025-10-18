@@ -124,12 +124,12 @@ function SupplierMasterPage() {
   const handleDeleteClick = async (supplierId) => {
     if (window.confirm('この仕入れ先を削除してもよろしいですか？')) {
       try {
-        const response = await fetch(`${GAS_WEB_APP_URL}?action=deleteSupplier`, {
+        const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ supplierId }), // GAS側でsupplierIdを直接受け取る
+          body: JSON.stringify({ action: 'deleteSupplier', supplierId }),
           mode: 'cors',
         });
         const data = await response.json();
@@ -196,12 +196,12 @@ function SupplierMasterPage() {
       if (editingSupplier) {
         // 更新
         const updatedData = { ...editingSupplier, ...supplierData };
-        const response = await fetch(`${GAS_WEB_APP_URL}?action=editSupplier`, {
+        const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(updatedData),
+          body: JSON.stringify({ action: 'editSupplier', ...updatedData }),
           mode: 'cors',
         });
         const data = await response.json();
@@ -214,12 +214,12 @@ function SupplierMasterPage() {
         }
       } else {
         // 追加
-        const response = await fetch(`${GAS_WEB_APP_URL}?action=addSupplier`, {
+        const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(supplierData),
+          body: JSON.stringify({ action: 'addSupplier', ...supplierData }),
           mode: 'cors',
         });
         const data = await response.json();
