@@ -1,0 +1,14 @@
+[build]
+  command = "vite build"
+  publish = "dist"
+  functions = "netlify/functions" # ここを修正
+
+[dev]
+  command = "vite"
+  port = 3000
+
+[[redirects]]
+  from = "/api/gas/*"
+  to = "/.netlify/functions/gas-proxy" # プロキシ関数へのパス
+  status = 200
+  force = true
