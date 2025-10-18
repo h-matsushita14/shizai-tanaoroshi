@@ -11,6 +11,12 @@ exports.handler = async (event, context) => {
     targetUrl = `${gasUrl}?${queryString}`;
   }
 
+  console.log('GAS_PROXY: gasUrl:', gasUrl);
+  console.log('GAS_PROXY: targetUrl:', targetUrl);
+  console.log('GAS_PROXY: httpMethod:', httpMethod);
+  console.log('GAS_PROXY: headers:', headers);
+  console.log('GAS_PROXY: body:', body);
+
   try {
     const response = await fetch(targetUrl, {
       method: httpMethod,
@@ -21,7 +27,16 @@ exports.handler = async (event, context) => {
       body: body, // POSTリクエストの場合
     });
 
-    const data = await response.json();
+    console.log('GAS_PROXY: Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('GAS_PROXY: Error response from GAS:', errorText);
+      throw new Error(`GAS responded with status ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('GAS_PROXY: Result from GAS:', result);
 
     return {
       statusCode: response.status,
@@ -31,9 +46,10 @@ exports.handler = async (event, context) => {
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(result),
     };
   } catch (error) {
+    console.error('GAS_PROXY: Fetch error:', error.message);
     return {
       statusCode: 500,
       headers: {
