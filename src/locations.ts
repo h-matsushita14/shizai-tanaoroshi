@@ -1,10 +1,18 @@
 // 型定義
 type InventoryStatus = 'recorded' | 'unrecorded';
 
+interface ProductInventory {
+  商品コード: string;
+  商品名: string;
+  棚卸数量: number;
+  記録日時: Date;
+}
+
 interface LocationDetail {
   id: string;
   name: string;
   inventoryStatus: InventoryStatus;
+  products?: ProductInventory[]; // 製品情報を追加
 }
 
 interface StorageArea {
@@ -12,6 +20,7 @@ interface StorageArea {
   name: string;
   details: LocationDetail[];
   inventoryStatus: InventoryStatus;
+  products?: ProductInventory[]; // 製品情報を追加
 }
 
 interface CategoryGroup {
@@ -35,6 +44,9 @@ function getLocations() {
   const inventorySheet = ss.getSheetByName("Inventory_Records");
   if (!inventorySheet) throw new Error("Inventory_Recordsシートが見つかりません。");
 
+  const stockSummarySheet = ss.getSheetByName("Stock_Summary");
+  if (!stockSummarySheet) throw new Error("Stock_Summaryシートが見つかりません。");
+
   // --- 棚卸記録の取得と処理 ---
   const inventoryData = inventorySheet.getDataRange().getValues();
   const inventoryHeaders = inventoryData.shift() || [];
@@ -56,6 +68,52 @@ function getLocations() {
     if (timestamp >= today && timestamp < tomorrow) {
       recordedLocationIds.add(row[invLocationIdIndex]);
     }
+  });
+
+  // --- Stock_Summaryから製品在庫データを取得と処理 ---
+  const stockSummaryData = stockSummarySheet.getDataRange().getValues();
+  const stockSummaryHeaders = stockSummaryData.shift() || [];
+
+  const ssLocationIdIndex = stockSummaryHeaders.indexOf("ロケーションID");
+  const ssProductCodeIndex = stockSummaryHeaders.indexOf("商品ID"); // スキーマでは商品コードだが、シートは商品IDの可能性
+  const ssProductNameIndex = stockSummaryHeaders.indexOf("商品名");
+  const ssQuantityIndex = stockSummaryHeaders.indexOf("棚卸数量");
+  const ssTimestampIndex = stockSummaryHeaders.indexOf("記録日時");
+
+  if ([ssLocationIdIndex, ssProductCodeIndex, ssProductNameIndex, ssQuantityIndex, ssTimestampIndex].includes(-1)) {
+    throw new Error("Stock_Summaryシートに必要なカラム（ロケーションID, 商品ID, 商品名, 棚卸数量, 記録日時）が見つかりません。");
+  }
+
+  const locationProductsMap = new Map<string, ProductInventory[]>();
+
+  stockSummaryData.forEach(row => {
+    const locationId = row[ssLocationIdIndex];
+    const productCode = row[ssProductCodeIndex];
+    const productName = row[ssProductNameIndex];
+    const quantity = row[ssQuantityIndex];
+    const timestamp = new Date(row[ssTimestampIndex]);
+
+    if (!locationProductsMap.has(locationId)) {
+      locationProductsMap.set(locationId, []);
+    }
+    locationProductsMap.get(locationId)?.push({
+      商品コード: productCode,
+      商品名: productName,
+      棚卸数量: quantity,
+      記録日時: timestamp,
+    });
+  });
+
+  // 各ロケーションの製品リストを記録日時でソートし、最新のものを優先
+  locationProductsMap.forEach((products, locationId) => {
+    const productMap = new Map<string, ProductInventory>();
+    products.forEach(product => {
+      const existingProduct = productMap.get(product.商品コード);
+      if (!existingProduct || existingProduct.記録日時 < product.記録日時) {
+        productMap.set(product.商品コード, product);
+      }
+    });
+    locationProductsMap.set(locationId, Array.from(productMap.values()));
   });
 
   // --- ロケーションマスターの取得と処理 ---
@@ -104,12 +162,18 @@ function getLocations() {
           id: id,
           name: storageArea,
           details: [],
-          inventoryStatus: areaStatus
+          inventoryStatus: areaStatus,
+          products: locationProductsMap.get(id) || [] // storageAreaに直接製品をアタッチ
         };
       }
 
       if (detail) {
-        hierarchy[category].storageAreas[storageArea].details.push({ id: id, name: detail, inventoryStatus: status });
+        hierarchy[category].storageAreas[storageArea].details.push({
+          id: id,
+          name: detail,
+          inventoryStatus: status,
+          products: locationProductsMap.get(id) || [] // LocationDetailに製品をアタッチ
+        });
       }
     }
   });

@@ -110,7 +110,8 @@ function LocationPage() {
         setSelectedLocationForForm({
           id: locationId,
           name: parentArea.name,
-          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name
+          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
+          products: foundLocation.products || [] // 製品情報を追加
         });
         setIsFormDialogOpen(true);
       } else {
@@ -169,7 +170,8 @@ function LocationPage() {
         setSelectedLocationForForm({
           id: areaId,
           name: parentArea.name,
-          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name
+          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
+          products: foundLocation.products || [] // 製品情報を追加
         });
         setIsFormDialogOpen(true);
         setSelectedCategory(parentCategory);
@@ -454,6 +456,8 @@ function LocationPage() {
           locationId={selectedLocationForForm.id}
           locationName={selectedLocationForForm.name}
           locationDetail={selectedLocationForForm.detail}
+          initialProducts={selectedLocationForForm.products} // 製品情報を追加
+          onLocationsUpdated={fetchLocations} // ロケーションリスト更新後に再フェッチする関数を渡す
         />
       )}
     </Box>

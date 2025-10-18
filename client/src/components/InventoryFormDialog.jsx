@@ -11,9 +11,9 @@ import LocationProductRegistrationDialog from './LocationProductRegistrationDial
 
 import { sendGetRequest, sendPostRequest } from '@/api/gas';
 
-function InventoryFormDialog({ open, onClose, locationId, locationName, locationDetail }) {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+function InventoryFormDialog({ open, onClose, locationId, locationName, locationDetail, initialProducts, onLocationsUpdated }) {
+  const [products, setProducts] = useState(initialProducts || []);
+  const [loading, setLoading] = useState(false); // initialProductsがあるため、初期ロードは不要
   const [error, setError] = useState(null);
   const [quantities, setQuantities] = useState({}); // 商品コードをキーとして { lot: '', loose: '' } を保持
   const [isProductRegistrationDialogOpen, setIsProductRegistrationDialogOpen] = useState(false); // 商品登録ダイアログの開閉状態
@@ -22,38 +22,21 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
   const isMobileOrTablet = useMediaQuery(theme.breakpoints.down('md')); // md以下の画面サイズでtrue
 
   useEffect(() => {
-    if (!open || !locationId) {
+    if (!open) {
       setProducts([]);
       setQuantities({});
       return;
     }
+    // initialProductsが更新されたらproductsステートも更新
+    setProducts(initialProducts || []);
+    // quantitiesの初期化
+    const initialQuantities = {};
+    (initialProducts || []).forEach(product => {
+      initialQuantities[product["商品コード"]] = { lot: '', loose: '' }; // 初期値は空
+    });
+    setQuantities(initialQuantities);
 
-    fetchProducts();
-  }, [open, locationId]);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await sendGetRequest('getProductsByLocation', { locationId });
-
-      if (result.status === 'success') {
-        setProducts(result.data);
-        // 既存の数量を初期値として設定
-        const initialQuantities = {};
-        result.data.forEach(product => {
-          initialQuantities[product["商品コード"]] = { lot: '', loose: '' }; // 初期値は空
-        });
-        setQuantities(initialQuantities);
-      } else {
-        throw new Error(result.message || '商品データの取得に失敗しました。');
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [open, initialProducts]);
 
   const handleQuantityChange = (productCode, type, value) => {
     setQuantities(prev => ({
@@ -117,7 +100,9 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
 
   const handleCloseProductRegistrationDialog = () => {
     setIsProductRegistrationDialogOpen(false);
-    fetchProducts(); // 商品登録後に商品リストを再フェッチ
+    if (onLocationsUpdated) {
+      onLocationsUpdated(); // ロケーションリストを再フェッチ
+    }
   };
 
   const formatUnit = (unit) => {
@@ -187,6 +172,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                         <Box>
                           <Typography variant="body2">商品コード: {product["商品コード"]}</Typography>
                           <Typography variant="body2">商品名: {product["商品名"]}</Typography>
+                          <Typography variant="body2">棚卸数量: {product["棚卸数量"] || '-'}</Typography>
+                          <Typography variant="body2">記録日時: {product["記録日時"] ? new Date(product["記録日時"]).toLocaleString() : '-'}</Typography>
                         </Box>
                       }
                       arrow
@@ -270,6 +257,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                   <TableRow>
                     <TableCell>商品コード</TableCell>
                     <TableCell>商品名</TableCell>
+                    <TableCell align="center">棚卸数量</TableCell>
+                    <TableCell align="center">記録日</TableCell>
                     <TableCell align="center">ロット数量</TableCell>
                     <TableCell align="center">バラ数量</TableCell>
                   </TableRow>
@@ -285,6 +274,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                       <TableRow key={product["商品コード"]}>
                         <TableCell>{product["商品コード"]}</TableCell>
                         <TableCell>{product["商品名"]}</TableCell>
+                        <TableCell align="right">{product["棚卸数量"] || '-'}</TableCell>
+                        <TableCell align="right">{product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}</TableCell>
                         <TableCell align="right" sx={{ width: '100px' }}>
                           {/* ロットとバラの単位が同じでない場合、またはロット単位のみ存在する場合に表示 */}
                           {!isSameUnit && lotUnit && (
