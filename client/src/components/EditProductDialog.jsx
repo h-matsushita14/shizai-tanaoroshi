@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, CircularProgress, Alert, Typography, IconButton, MenuItem, Autocomplete } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+import { sendPostRequest } from '../api/gas';
+
 // 表示するフィールドの順序を定義
 const fieldOrder = [
   "商品コード",
@@ -109,20 +111,7 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
     }
 
     try {
-      const scriptUrl = import.meta.env.VITE_GAS_API_URL;
-      const response = await fetch(scriptUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'editProduct', ...formData }),
-        mode: 'cors',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendPostRequest('editProduct', { ...formData });
 
       if (result.status === 'success') {
         onProductUpdated(); // 親コンポーネントに通知
@@ -148,20 +137,7 @@ function EditProductDialog({ open, handleClose, product, onProductUpdated, produ
       setLoading(true);
       setError(null);
       try {
-        const scriptUrl = import.meta.env.VITE_GAS_WEB_APP_URL;
-        const response = await fetch(scriptUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ action: 'deleteProduct', "商品コード": product["商品コード"] }),
-          mode: 'cors',
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
+        const result = await sendPostRequest('deleteProduct', { "商品コード": product["商品コード"] });
 
         if (result.status === 'success') {
           onProductUpdated(); // 親コンポーネントに通知

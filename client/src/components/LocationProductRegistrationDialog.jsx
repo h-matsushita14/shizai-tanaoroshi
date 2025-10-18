@@ -7,7 +7,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
+import { sendGetRequest, sendPostRequest } from '../api/gas';
 
 function LocationProductRegistrationDialog({
   open, onClose, locationId, locationName, onProductListUpdated
@@ -29,12 +29,7 @@ function LocationProductRegistrationDialog({
 
   const fetchAllProducts = async () => {
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=getProducts`);
-      console.log("fetchAllProducts raw response:", response);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendGetRequest('getProducts');
       console.log("fetchAllProducts parsed result:", result);
       if (result.status === 'success') {
         setAllProducts(result.data);
@@ -51,12 +46,7 @@ function LocationProductRegistrationDialog({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=getProductsByLocation&locationId=${locationId}`);
-      console.log("fetchLocationProducts raw response:", response);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendGetRequest('getProductsByLocation', { locationId });
       console.log("fetchLocationProducts parsed result:", result);
       if (result.status === 'success') {
         setLocationProducts(result.data);
@@ -73,12 +63,7 @@ function LocationProductRegistrationDialog({
 
   const handleAddProductToLocation = async (productCode) => {
     try {
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'addLocationProduct', locationId, productCode }),
-      });
-      const result = await response.json();
+      const result = await sendPostRequest('addLocationProduct', { locationId, productCode });
       if (result.status === 'success') {
         alert(result.message);
         fetchLocationProducts(); // 関連付けられた商品を再取得
@@ -95,12 +80,7 @@ function LocationProductRegistrationDialog({
   const handleDeleteProductFromLocation = async (productCode) => {
     if (window.confirm(`このロケーションから商品コード: ${productCode} を削除してもよろしいですか？`)) {
       try {
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'deleteLocationProduct', locationId, productCode }),
-        });
-        const result = await response.json();
+        const result = await sendPostRequest('deleteLocationProduct', { locationId, productCode });
         if (result.status === 'success') {
           alert(result.message);
           fetchLocationProducts(); // 関連付けられた商品を再取得

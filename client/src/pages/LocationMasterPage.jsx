@@ -9,7 +9,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocationProductRegistrationDialog from '../components/LocationProductRegistrationDialog'; // 追加
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+import { sendGetRequest, sendPostRequest } from '../api/gas';
 
 const LocationCard = ({ location, handleEditClick, handleProductRegistrationClick }) => (
   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -67,10 +67,7 @@ function LocationMasterPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=getLocationsMaster`, {
-        mode: 'cors',
-      }); // 新しいGASアクションを想定
-      const result = await response.json();
+      const result = await sendGetRequest('getLocationsMaster'); // 新しいGASアクションを想定
       if (result.status === 'success') {
         const locationsWithId = result.data.map((loc, index) => ({
           id: loc["ロケーションID"] || index,
@@ -160,13 +157,7 @@ function LocationMasterPage() {
     setError(null);
     try {
       const action = editingLocation ? 'editLocation' : 'addLocation';
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...formData }),
-        mode: 'cors',
-      });
-      const result = await response.json();
+      const result = await sendPostRequest(action, formData);
       if (result.status === 'success') {
         alert(result.message);
         fetchLocations();
@@ -191,13 +182,7 @@ function LocationMasterPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'deleteLocation', locationId: editingLocation["ロケーションID"] }),
-          mode: 'cors',
-        });
-        const result = await response.json();
+        const result = await sendPostRequest('deleteLocation', { locationId: editingLocation["ロケーションID"] });
         if (result.status === 'success') {
           alert(result.message);
           fetchLocations();

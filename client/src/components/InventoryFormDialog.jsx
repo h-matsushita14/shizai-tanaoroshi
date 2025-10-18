@@ -9,7 +9,7 @@ import AddIcon from '@mui/icons-material/Add'; // AddIcon をインポート
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // InfoOutlinedIcon を追加
 import LocationProductRegistrationDialog from './LocationProductRegistrationDialog'; // 商品登録ダイアログをインポート
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
+import { sendGetRequest, sendPostRequest } from '../api/gas';
 
 function InventoryFormDialog({ open, onClose, locationId, locationName, locationDetail }) {
   const [products, setProducts] = useState([]);
@@ -35,9 +35,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
     setLoading(true);
     setError(null);
     try {
-      const requestUrl = `${GAS_WEB_APP_URL}?action=getProductsByLocation&locationId=${locationId}`;
-      const response = await fetch(requestUrl);
-      const result = await response.json();
+      const result = await sendGetRequest('getProductsByLocation', { locationId });
 
       if (result.status === 'success') {
         setProducts(result.data);
@@ -97,12 +95,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
 
     setLoading(true);
     try {
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'addInventoryRecord', records: inventoryData }),
-      });
-      const result = await response.json();
+      const result = await sendPostRequest('addInventoryRecord', { records: inventoryData });
 
       if (result.status === 'success') {
         alert('棚卸データを正常に保存しました。');

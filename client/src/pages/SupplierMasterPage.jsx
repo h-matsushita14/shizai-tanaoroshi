@@ -23,6 +23,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 
+import { sendGetRequest, sendPostRequest } from '../api/gas';
+
 function SupplierMasterPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -55,10 +57,7 @@ function SupplierMasterPage() {
   const fetchSuppliers = async () => {
     setLoading(true); // データ取得開始時にローディングをtrueに
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?action=getSuppliers`, {
-        mode: 'cors',
-      });
-      const data = await response.json();
+      const data = await sendGetRequest('getSuppliers');
       if (data.status === 'success') {
         // 各仕入先に一意のIDを付与（DataGridの要件に合わせる）
         const suppliersWithId = data.data.map((supplier, index) => ({
@@ -124,15 +123,7 @@ function SupplierMasterPage() {
   const handleDeleteClick = async (supplierId) => {
     if (window.confirm('この仕入れ先を削除してもよろしいですか？')) {
       try {
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ action: 'deleteSupplier', supplierId }),
-          mode: 'cors',
-        });
-        const data = await response.json();
+        const data = await sendPostRequest('deleteSupplier', { supplierId });
         if (data.status === 'success') {
           alert(data.message);
           fetchSuppliers(); // データを再取得してUIを更新
@@ -196,15 +187,7 @@ function SupplierMasterPage() {
       if (editingSupplier) {
         // 更新
         const updatedData = { ...editingSupplier, ...supplierData };
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ action: 'editSupplier', ...updatedData }),
-          mode: 'cors',
-        });
-        const data = await response.json();
+        const data = await sendPostRequest('editSupplier', updatedData);
         if (data.status === 'success') {
           alert(data.message);
           fetchSuppliers(); // データを再取得してUIを更新
@@ -214,15 +197,7 @@ function SupplierMasterPage() {
         }
       } else {
         // 追加
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ action: 'addSupplier', ...supplierData }),
-          mode: 'cors',
-        });
-        const data = await response.json();
+        const data = await sendPostRequest('addSupplier', supplierData);
         if (data.status === 'success') {
           alert(data.message);
           fetchSuppliers(); // データを再取得してUIを更新

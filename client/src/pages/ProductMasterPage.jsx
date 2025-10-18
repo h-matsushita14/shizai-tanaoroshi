@@ -6,6 +6,8 @@ import AddProductDialog from '../components/AddProductDialog';
 import EditProductDialog from '../components/EditProductDialog';
 import ProductDetailsDialog from '../components/ProductDetailsDialog';
 
+import { sendGetRequest } from '../api/gas';
+
 // ProductCard コンポーネント
 const ProductCard = ({ product, handleViewDetails, handleEdit }) => (
   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -65,14 +67,7 @@ function ProductMasterPage() {
     setLoading(true);
     setError(null);
     try {
-      const fullUrl = `${GAS_WEB_APP_URL}?action=getProducts`;
-      const response = await fetch(fullUrl, {
-        mode: 'cors',
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendGetRequest('getProducts');
       if (result.status === 'success') {
         const productsWithId = result.data.map((product, index) => ({
           id: product["商品コード"] || index, // 商品コードをidとして使用、なければindex
@@ -98,14 +93,7 @@ function ProductMasterPage() {
 
   const fetchSuppliers = async () => {
     try {
-      const fullUrl = `${GAS_WEB_APP_URL}?action=getSuppliers`;
-      const response = await fetch(fullUrl, {
-        mode: 'cors',
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendGetRequest('getSuppliers');
       if (result.status === 'success') {
         setSuppliers(result.data);
       } else {

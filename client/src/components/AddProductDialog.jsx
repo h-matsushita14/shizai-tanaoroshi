@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, MenuItem, CircularProgress, Alert, Autocomplete } from '@mui/material';
 
+import { sendPostRequest } from '../api/gas';
+
 function AddProductDialog({ open, handleClose, onProductAdded, products, suppliers, lotUnits, pieceUnits }) {
   const [formData, setFormData] = useState({
     "商品コード": '',
@@ -98,20 +100,7 @@ function AddProductDialog({ open, handleClose, onProductAdded, products, supplie
     }
 
     try {
-      const scriptUrl = import.meta.env.VITE_GAS_API_URL;
-      const response = await fetch(scriptUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'addProduct', ...formData }),
-        mode: 'cors',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendPostRequest('addProduct', { ...formData });
 
       if (result.status === 'success') {
         onProductAdded(); // 親コンポーネントに通知
