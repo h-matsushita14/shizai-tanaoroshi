@@ -1,6 +1,4 @@
 node_modules/
-client/
-src/
 package.json
 package-lock.json
 typescript.json
@@ -9,3 +7,5 @@ typescript.json
 .geminiignore
 .gitignore
 .git/
+client/dist/
+client/netlify.toml

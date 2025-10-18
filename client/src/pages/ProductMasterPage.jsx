@@ -6,7 +6,7 @@ import AddProductDialog from '../components/AddProductDialog';
 import EditProductDialog from '../components/EditProductDialog';
 import ProductDetailsDialog from '../components/ProductDetailsDialog';
 
-import { sendGetRequest } from '@/api/gas';
+import { sendGetRequest, sendPostRequest } from '../api/gas.js';
 
 // ProductCard コンポーネント
 const ProductCard = ({ product, handleViewDetails, handleEdit }) => (
