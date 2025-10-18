@@ -36,6 +36,44 @@ interface LocationMasterData {
   [key: string]: string | number;
 }
 
+// 型定義
+type InventoryStatus = 'recorded' | 'unrecorded';
+
+interface ProductInventory {
+  商品コード: string;
+  商品名: string;
+  棚卸数量: number;
+  記録日時: Date;
+}
+
+interface LocationDetail {
+  id: string;
+  name: string;
+  inventoryStatus: InventoryStatus;
+  products?: ProductInventory[]; // 製品情報を追加
+}
+
+interface StorageArea {
+  id: string;
+  name: string;
+  details: LocationDetail[];
+  inventoryStatus: InventoryStatus;
+  products?: ProductInventory[]; // 製品情報を追加
+}
+
+interface CategoryGroup {
+  category: string;
+  storageAreas: { [name: string]: StorageArea };
+}
+
+interface Hierarchy {
+  [category: string]: CategoryGroup;
+}
+
+interface LocationMasterData {
+  [key: string]: string | number;
+}
+
 function getLocations() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const locationSheet = ss.getSheetByName("Location_Master");
@@ -44,17 +82,17 @@ function getLocations() {
   const inventorySheet = ss.getSheetByName("Inventory_Records");
   if (!inventorySheet) throw new Error("Inventory_Recordsシートが見つかりません。");
 
-  const stockSummarySheet = ss.getSheetByName("Stock_Summary");
-  if (!stockSummarySheet) throw new Error("Stock_Summaryシートが見つかりません。");
-
   // --- 棚卸記録の取得と処理 ---
   const inventoryData = inventorySheet.getDataRange().getValues();
   const inventoryHeaders = inventoryData.shift() || [];
   const invLocationIdIndex = inventoryHeaders.indexOf("ロケーションID");
   const invTimestampIndex = inventoryHeaders.indexOf("記録日時");
+  const invProductCodeIndex = inventoryHeaders.indexOf("商品コード");
+  const invLotQuantityIndex = inventoryHeaders.indexOf("ロット数量");
+  const invLooseQuantityIndex = inventoryHeaders.indexOf("バラ数量");
 
-  if (invLocationIdIndex === -1 || invTimestampIndex === -1) {
-    throw new Error("Inventory_Recordsシートに必要なカラム（ロケーションID, 記録日時）が見つかりません。");
+  if (invLocationIdIndex === -1 || invTimestampIndex === -1 || invProductCodeIndex === -1 || invLotQuantityIndex === -1 || invLooseQuantityIndex === -1) {
+    throw new Error("Inventory_Recordsシートに必要なカラム（ロケーションID, 記録日時, 商品コード, ロット数量, バラ数量）が見つかりません。");
   }
 
   const today = new Date();
@@ -63,57 +101,43 @@ function getLocations() {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   const recordedLocationIds = new Set<string>();
+  const latestProductInventoryMap = new Map<string, Map<string, ProductInventory>>(); // Map<locationId, Map<productCode, ProductInventory>>
+
   inventoryData.forEach(row => {
+    const locationId = String(row[invLocationIdIndex]);
     const timestamp = new Date(row[invTimestampIndex]);
-    if (timestamp >= today && timestamp < tomorrow) {
-      recordedLocationIds.add(row[invLocationIdIndex]);
-    }
-  });
+    const productCode = String(row[invProductCodeIndex]);
+    const lotQuantity = typeof row[invLotQuantityIndex] === 'number' ? row[invLotQuantityIndex] : 0;
+    const looseQuantity = typeof row[invLooseQuantityIndex] === 'number' ? row[invLooseQuantityIndex] : 0;
 
-  // --- Stock_Summaryから製品在庫データを取得と処理 ---
-  const stockSummaryData = stockSummarySheet.getDataRange().getValues();
-  const stockSummaryHeaders = stockSummaryData.shift() || [];
+    // Get product name from Product_Master (assuming Product_Master is available and has product names)
+    // For now, we'll use a placeholder or fetch it later if needed.
+    // Or, if Inventory_Records also has product name, use that.
+    // For simplicity, let's assume we can get product name from Product_Master later or it's not critical for this step.
+    // For now, let's just use productCode as productName.
+    const productName = productCode; // Placeholder, will refine if Product_Master is needed.
 
-  const ssLocationIdIndex = stockSummaryHeaders.indexOf("ロケーションID");
-  const ssProductCodeIndex = stockSummaryHeaders.indexOf("商品ID"); // スキーマでは商品コードだが、シートは商品IDの可能性
-  const ssProductNameIndex = stockSummaryHeaders.indexOf("商品名");
-  const ssQuantityIndex = stockSummaryHeaders.indexOf("棚卸数量");
-  const ssTimestampIndex = stockSummaryHeaders.indexOf("記録日時");
-
-  if ([ssLocationIdIndex, ssProductCodeIndex, ssProductNameIndex, ssQuantityIndex, ssTimestampIndex].includes(-1)) {
-    throw new Error("Stock_Summaryシートに必要なカラム（ロケーションID, 商品ID, 商品名, 棚卸数量, 記録日時）が見つかりません。");
-  }
-
-  const locationProductsMap = new Map<string, ProductInventory[]>();
-
-  stockSummaryData.forEach(row => {
-    const locationId = row[ssLocationIdIndex];
-    const productCode = row[ssProductCodeIndex];
-    const productName = row[ssProductNameIndex];
-    const quantity = row[ssQuantityIndex];
-    const timestamp = new Date(row[ssTimestampIndex]);
-
-    if (!locationProductsMap.has(locationId)) {
-      locationProductsMap.set(locationId, []);
-    }
-    locationProductsMap.get(locationId)?.push({
+    const currentProductInventory: ProductInventory = {
       商品コード: productCode,
       商品名: productName,
-      棚卸数量: quantity,
+      棚卸数量: lotQuantity + looseQuantity,
       記録日時: timestamp,
-    });
-  });
+    };
 
-  // 各ロケーションの製品リストを記録日時でソートし、最新のものを優先
-  locationProductsMap.forEach((products, locationId) => {
-    const productMap = new Map<string, ProductInventory>();
-    products.forEach(product => {
-      const existingProduct = productMap.get(product.商品コード);
-      if (!existingProduct || existingProduct.記録日時 < product.記録日時) {
-        productMap.set(product.商品コード, product);
-      }
-    });
-    locationProductsMap.set(locationId, Array.from(productMap.values()));
+    if (timestamp >= today && timestamp < tomorrow) {
+      recordedLocationIds.add(locationId);
+    }
+
+    if (!latestProductInventoryMap.has(locationId)) {
+      latestProductInventoryMap.set(locationId, new Map<string, ProductInventory>());
+    }
+
+    const productsInLocation = latestProductInventoryMap.get(locationId)!;
+    const existingProduct = productsInLocation.get(productCode);
+
+    if (!existingProduct || existingProduct.記録日時 < currentProductInventory.記録日時) {
+      productsInLocation.set(productCode, currentProductInventory);
+    }
   });
 
   // --- ロケーションマスターの取得と処理 ---
@@ -140,10 +164,10 @@ function getLocations() {
   const hierarchy: Hierarchy = {};
 
   locationData.forEach(row => {
-    const id = row[idIndex];
-    const category = row[categoryIndex];
-    const storageArea = row[storageAreaIndex];
-    const detail = row[detailIndex];
+    const id = String(row[idIndex]);
+    const category = String(row[categoryIndex]);
+    const storageArea = String(row[storageAreaIndex]);
+    const detail = String(row[detailIndex]);
     const status: InventoryStatus = recordedLocationIds.has(id) ? 'recorded' : 'unrecorded';
 
     if (!category) return;
@@ -163,7 +187,7 @@ function getLocations() {
           name: storageArea,
           details: [],
           inventoryStatus: areaStatus,
-          products: locationProductsMap.get(id) || [] // storageAreaに直接製品をアタッチ
+          products: Array.from(latestProductInventoryMap.get(id)?.values() || []) // storageAreaに直接製品をアタッチ
         };
       }
 
@@ -172,7 +196,7 @@ function getLocations() {
           id: id,
           name: detail,
           inventoryStatus: status,
-          products: locationProductsMap.get(id) || [] // LocationDetailに製品をアタッチ
+          products: Array.from(latestProductInventoryMap.get(id)?.values() || []) // LocationDetailに製品をアタッチ
         });
       }
     }
