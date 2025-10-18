@@ -496,131 +496,221 @@ React + Vite + GASの連携コードを生成する際は:
 7. **プリフライトリクエストを考慮** - OPTIONSの存在を理解
 8. **Netlifyの環境変数設定を前提** - ただしフォールバック値も必須
 
-# Google Apps Script (GAS) CORS対応の重要な制約事項
+# Google Apps Script (GAS) CORS対応の重要事項
 
-## 絶対に守るべきルール
+## 1. GASにおけるCORS対応の制約と推奨されるアプローチ
+
+**Google Apps Scriptの`ContentService`や`HtmlService`でレスポンスヘッダーを直接制御することには制約があります。**
+特に、`ContentService.createTextOutput()`から返されるオブジェクトには、Node.jsのように`res.setHeader()`や`addHeader()`といったメソッドは存在しません。
 
 ### ❌ やってはいけないこと
-**Google Apps ScriptのContentServiceには`setHeader`メソッドが存在しません。**
-以下のようなコードは**エラーになります**:
+
+**`ContentService.createTextOutput()`から返されたオブジェクトに対して`.setHeader()`や`.addHeader()`を呼び出すことはできません。**
+以下のようなコードは**TypeScriptコンパイルエラーになります**：
 
 ```typescript
-// ❌ これは動作しません
+// ❌ これは動作しません（TypeScriptエラー）
 output.setHeader('Access-Control-Allow-Origin', '*');
-(output as any).setHeader('Access-Control-Allow-Origin', 'https://example.com');
+// または
+response.addHeader('Access-Control-Allow-Origin', '*');
 ```
 
-### ✅ 正しい対応方法
+### ✅ 正しい対応方法（推奨）
 
-#### 1. GASデプロイメント設定でCORS対応する（推奨）
-Google Apps Scriptをウェブアプリとしてデプロイする際の設定:
-- **アクセスできるユーザー**: 「全員」を選択
-- **次のユーザーとして実行**: 「自分」を選択
-- これにより、GET/POST/OPTIONSすべてのリクエストでCORSが自動的に許可されます
+**フロントエンドとGASの間にCORS回避用プロキシを立てる**
 
-#### 2. 正しいコード実装
+Netlify Functions や Vercel Edge Function などのサーバーレス機能を利用して、以下のようなルートを構築します。
 
+`フロントエンド (Netlify) → プロキシ (Netlify Function) → バックエンド (GAS)`
+
+このプロキシ側で `Access-Control-Allow-Origin: *` などのCORSヘッダーを付与することで、ブラウザはプリフライトリクエストを成功させ、POSTリクエストをGASに送信できるようになります。
+
+#### プロキシ実装の例 (Netlify Functions)
+
+1.  **Netlify Functionの作成**:
+    `netlify/functions/gas-proxy.js` (または `gas-proxy.ts`) のようなファイルを作成します。
+
+    ```javascript
+    // netlify/functions/gas-proxy.js
+    exports.handler = async (event, context) => {
+      const gasUrl = process.env.VITE_GAS_API_URL; // Netlifyの環境変数からGASのURLを取得
+      const { path, httpMethod, headers, body } = event;
+
+      // GASへのパスを構築 (例: /api/gas/someAction -> GAS_URL)
+      // ここではシンプルにGAS_URLに転送
+      const targetUrl = gasUrl; 
+
+      try {
+        const response = await fetch(targetUrl, {
+          method: httpMethod,
+          headers: {
+            'Content-Type': headers['content-type'] || 'application/json',
+            // 必要に応じて他のヘッダーも転送
+          },
+          body: body, // POSTリクエストの場合
+        });
+
+        const data = await response.json();
+
+        return {
+          statusCode: response.status,
+          headers: {
+            'Access-Control-Allow-Origin': '*', // ここでCORSヘッダーを設定
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        };
+      } catch (error) {
+        return {
+          statusCode: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ error: error.message }),
+        };
+      }
+    };
+    ```
+
+2.  **Netlifyの設定 (`netlify.toml`)**:
+    `netlify.toml`にFunctionsのディレクトリとリダイレクトルールを追加します。
+
+    ```toml
+    [build]
+      functions = "netlify/functions" # Functionsのディレクトリを指定
+
+    [[redirects]]
+      from = "/api/gas/*"
+      to = "/.netlify/functions/gas-proxy" # プロキシ関数へのパス
+      status = 200
+      force = true
+    ```
+
+3.  **フロントエンドの変更**:
+    フロントエンドのAPI呼び出しを、GASのURLではなくプロキシのURLに変更します。
+
+    ```javascript
+    // src/config.js (GAS_WEB_APP_URLは不要になるか、プロキシURLに変わる)
+    export const PROXY_GAS_URL = '/api/gas'; // Netlifyのプロキシエンドポイント
+
+    // src/api/gas.js (fetchのURLを変更)
+    const response = await fetch(PROXY_GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        action: 'addInventoryRecord',
+        data: inventoryData 
+      })
+    });
+    ```
+
+## 2. POSTリクエストにおけるCORSエラーの典型的な原因
+
+### 問題点1: POSTリクエストのactionパラメータの位置
+
+*   **❌ 間違った実装**: POSTリクエストで`action`をURLクエリパラメータに含める。
+    ```typescript
+    // フロントエンド側
+    fetch('https://script.google.com/.../exec?action=addInventoryRecord', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: inventoryData })
+    })
+    ```
+*   **✅ 正しい実装**: POSTリクエストでは`action`を**リクエストボディに含める**のが正しい方法です。
+    ```typescript
+    // フロントエンド側
+    fetch('https://script.google.com/.../exec', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        action: 'addInventoryRecord',
+        data: inventoryData 
+      })
+    })
+    ```
+
+### 問題点2: doOptions関数の型定義
+
+*   **❌ 間違った実装**: OPTIONSリクエストは`DoPost`型ではないため、`function doOptions(e: GoogleAppsScript.Events.DoPost)`は誤りです。
+*   **✅ 正しい実装**: `function doOptions(e: any)`を使用します。
+
+## 3. フロントエンド実装のベストプラクティス
+
+### GETリクエスト
+`action`はURLクエリパラメータとして渡します。
 ```typescript
-/**
- * OPTIONSリクエスト (CORSプリフライト)
- * POST/PUT/DELETEなどのリクエスト前にブラウザが自動的に送信
- */
-function doOptions(e: GoogleAppsScript.Events.DoPost) {
-  return ContentService.createTextOutput('')
-    .setMimeType(ContentService.MimeType.TEXT);
-}
-
-/**
- * GETリクエストハンドラ
- */
-function doGet(e: GoogleAppsScript.Events.DoGet) {
-  let responsePayload;
-  const callback = e.parameter.callback;
-
-  try {
-    // ビジネスロジック
-    const action = e.parameter.action;
-    // ... 処理 ...
-    
-    responsePayload = {
-      status: 'success',
-      data: payload
-    };
-  } catch (error) {
-    responsePayload = {
-      status: 'error',
-      message: error.message
-    };
-  }
-
-  // JSONP対応（CORS回避の古典的な方法）
-  if (callback) {
-    return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-  
-  // 通常のJSON応答
-  return ContentService.createTextOutput(JSON.stringify(responsePayload))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-/**
- * POSTリクエストハンドラ
- */
-function doPost(e: GoogleAppsScript.Events.DoPost) {
-  let responsePayload;
-
-  try {
-    const requestBody = JSON.parse(e.postData.contents);
-    // ... 処理 ...
-    
-    responsePayload = {
-      status: 'success',
-      data: payload
-    };
-  } catch (error) {
-    responsePayload = {
-      status: 'error',
-      message: error.message
-    };
-  }
-  
-  return ContentService.createTextOutput(JSON.stringify(responsePayload))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+// actionはURLクエリパラメータ
+const response = await fetch(
+  `${GAS_URL}?action=getLocations`
+);
 ```
 
-## CORS問題の理解
-
-### 通信の流れ
+### POSTリクエスト
+`action`はリクエストボディに含めます。
+```typescript
+// actionはリクエストボディ
+const response = await fetch(GAS_URL, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    action: 'addInventoryRecord',
+    year: 2025,
+    month: 10,
+    records: [...]
+  })
+});
 ```
-フロントエンド (Netlify)  ←→  バックエンド (GAS)
-https://example.netlify.app  ←→  https://script.google.com/...
-```
 
-### 影響を受けるリクエスト
-- **GET**: データ取得（例: `?action=getLocations`）
-- **POST**: データ送信（例: `?action=addProduct`）
-- **OPTIONS**: プリフライトリクエスト（POSTの前に自動送信）
+## 4. デプロイ時の必須設定 (GAS側)
 
-**すべてのリクエストタイプで同じCORS制約が適用されます。**
+1.  **GASエディタ**で「デプロイ」→「新しいデプロイ」または「デプロイを管理」
+2.  **アクセスできるユーザー**: 「全員」を選択（必須）
+3.  **次のユーザーとして実行**: 「自分」を選択
+4.  コード変更後は**必ず新バージョンとして再デプロイ**
 
-## 重要なポイント
+## 5. デバッグチェックリスト
 
-1. **`setHeader`は使用不可**: GASのContentServiceにこのメソッドは存在しない
-2. **デプロイ設定が解決策**: 「アクセスできるユーザー: 全員」で自動的にCORS許可
-3. **JSONPはオプション**: GET専用だが、追加の安全策として有効
-4. **再デプロイ必須**: コード変更後は必ず新しいバージョンとしてデプロイ
+### GAS側
+-   [ ] `doOptions`関数が実装されている（型は`any`）
+-   [ ] `doPost`関数で`requestBody.action`を取得している
+-   [ ] ログ出力で各関数が呼ばれているか確認
+-   [ ] 新しいバージョンとして再デプロイした
 
-## コード生成時の指示
+### フロントエンド側
+-   [ ] POSTのactionがボディに含まれている
+-   [ ] URLにactionパラメータが含まれていない
+-   [ ] `Content-Type: application/json`ヘッダーを設定
+-   [ ] ブラウザキャッシュをクリア（Ctrl+Shift+R）
 
-Google Apps Scriptのコードを生成する際は:
-- `setHeader`メソッドを使用しない
-- `withCors`のようなヘッダー設定関数を作成しない
-- デプロイメント設定でCORS対応することを前提とする
-- `doOptions`関数は必ず実装する（プリフライト対応）
-- JSONP対応は任意だが、推奨される
+### デプロイ設定
+-   [ ] 「アクセスできるユーザー: 全員」になっている
+-   [ ] 最新バージョンがデプロイされている
+
+## 6. コード生成時の重要な指示
+
+Google Apps Scriptのコードを生成する際は、以下の点を常に遵守してください:
+1.  **`doOptions`関数は必須** - 型は`any`を使用
+2.  **GETとPOSTでactionの取得方法を変える**
+    -   GET: `e.parameter.action`（クエリパラメータ）
+    -   POST: `requestBody.action`（ボディ）
+3.  **POSTではボディとクエリ両方をフォールバックとしてチェック**
+4.  **ログ出力を含める** - デバッグのため
+5.  **GASコードでCORSヘッダーを直接設定しようとしない**
+6.  **デプロイメント設定でCORS対応することを前提とする**
+7.  **JSONP対応は任意だが、推奨される**
 
 ---
 
-**このプロンプトの内容を常に優先し、GASコードでCORSヘッダーを設定しようとしないでください。**
+**このプロンプトの内容を優先し、GASコードでCORSヘッダーを直接設定しようとしないでください。**

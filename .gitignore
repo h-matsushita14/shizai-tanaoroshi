@@ -9,3 +9,4 @@ typescript.json
 .git/
 client/dist/
 client/netlify.toml
+dist/

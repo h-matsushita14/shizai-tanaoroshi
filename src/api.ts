@@ -98,11 +98,10 @@ function doGet(e: GoogleAppsScript.Events.DoGet) {
   // JSONP対応
   if (callback) {
     return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);  } else {
+    return ContentService.createTextOutput(JSON.stringify(responsePayload))
+      .setMimeType(ContentService.MimeType.JSON);
   }
-  
-  return ContentService.createTextOutput(JSON.stringify(responsePayload))
-    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

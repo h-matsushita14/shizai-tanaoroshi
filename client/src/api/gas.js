@@ -1,5 +1,5 @@
 // src/api/gas.js
-import { GAS_WEB_APP_URL } from '../config';
+import { PROXY_GAS_URL } from '../config';
 
 /**
  * GASへPOSTリクエストを送信する共通関数
@@ -16,7 +16,7 @@ export const sendPostRequest = async (action, additionalData = {}) => {
     
     console.log('Sending POST request:', requestBody);
     
-    const response = await fetch(GAS_WEB_APP_URL, {
+    const response = await fetch(PROXY_GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export const sendGetRequest = async (action, params = {}) => {
       ...params
     });
     
-    const url = `${GAS_WEB_APP_URL}?${queryParams}`;
+    const url = `${PROXY_GAS_URL}?${queryParams}`;
     console.log('Sending GET request:', url);
     
     const response = await fetch(url);
