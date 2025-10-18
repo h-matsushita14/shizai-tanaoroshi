@@ -11,7 +11,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // 追加
 import InteractiveMap from '../components/InteractiveMap';
 import InventoryFormDialog from '../components/InventoryFormDialog';
 
-import { sendGetRequest } from '../api/gas'; // 追加
+import { sendGetRequest } from '../api/gas'; // sendGetRequestはonLocationsUpdatedで必要になるため残す
+import { useMasterData } } from '../contexts/MasterDataContext'; // useMasterData をインポート
 
 // const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL; // 削除
 // console.log("GAS_WEB_APP_URL:", GAS_WEB_APP_URL); // 削除
@@ -19,9 +20,9 @@ const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
 function LocationPage() {
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { masterData, isLoadingMasterData, masterDataError, setMasterData, setIsLoadingMasterData, setMasterDataError } = useMasterData();
+  const locations = masterData?.locations || [];
+
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [expandedStorageAreas, setExpandedStorageAreas] = useState({});
@@ -40,29 +41,24 @@ function LocationPage() {
     setMobileOpen(!mobileOpen);
   };
 
+  // ロケーションデータを再フェッチする関数 (MasterDataProviderのsetMasterDataを呼び出す)
   const fetchLocations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setIsLoadingMasterData(true);
+    setMasterDataError(null);
     try {
-      const result = await sendGetRequest('getLocations');
-
-      console.log("Response from Google Apps Script:", result);
-
+      const result = await sendGetRequest('getMasterData'); // getMasterDataを呼び出す
       if (result.status === 'success') {
-        setLocations(result.data);
+        setMasterData(result.data);
       } else {
         throw new Error(result.message || 'データの取得に失敗しました。');
       }
     } catch (err) {
-      setError(err.message);
+      setMasterDataError(err.message);
+      console.error('Error fetching master data:', err);
     } finally {
-      setLoading(false);
+      setIsLoadingMasterData(false);
     }
-  }, []); // 空の依存配列で初回のみ作成
-
-  useEffect(() => {
-    fetchLocations();
-  }, [fetchLocations]); // fetchLocationsを依存配列に追加
+  }, [setMasterData, setIsLoadingMasterData, setMasterDataError]);
 
   useEffect(() => {
     if (!isDesktop) {
@@ -72,10 +68,10 @@ function LocationPage() {
   }, [selectedCategory, isDesktop]);
 
   useEffect(() => {
-    if (!loading && !error) {
+    if (!isLoadingMasterData && !masterDataError) {
       console.log("Fetched data structure:", locations);
     }
-  }, [loading, error, locations]);
+  }, [isLoadingMasterData, masterDataError, locations]);
 
   const handleStorageLocationSelect = (storageName, locationId) => {
     const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
@@ -239,13 +235,13 @@ function LocationPage() {
             </Typography>
             <Divider />
             <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
-              {loading ? (
+              {isLoadingMasterData ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', m: 'auto', p: 2 }}>
                   <CircularProgress />
                   <Typography variant="body2" sx={{ mt: 1 }}>ロケーションデータを読み込み中...</Typography>
                 </Box>
-              ) : error ? (
-                <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>
+              ) : masterDataError ? (
+                <Alert severity="error" sx={{ m: 1 }}>{masterDataError}</Alert>
               ) : (
                 <div>
                   {locations.map((group) => (
@@ -333,8 +329,6 @@ function LocationPage() {
                         .find(area => area.name === e.target.value);
                       if (selectedArea) {
                         handleStorageLocationSelect(selectedArea.name, selectedArea.id);
-                      } else {
-                        setSelectedLocation(null);
                       }
                     }}
                   >
@@ -370,13 +364,13 @@ function LocationPage() {
                 minHeight: 0
               }}
             >
-              {loading ? (
+              {isLoadingMasterData ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 2 }}>
                   <CircularProgress />
                   <Typography variant="body2" sx={{ mt: 1 }}>ロケーションデータを読み込み中...</Typography>
                 </Box>
-              ) : error ? (
-                <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>
+              ) : masterDataError ? (
+                <Alert severity="error" sx={{ m: 1 }}>{masterDataError}</Alert>
               ) : selectedLocation ? (
                 <InteractiveMap
                   key={selectedLocation.svgPath}
