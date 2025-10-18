@@ -91,8 +91,10 @@ function doGet(e) {
         return ContentService.createTextOutput(`${callback}(${JSON.stringify(responsePayload)})`)
             .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
-    return ContentService.createTextOutput(JSON.stringify(responsePayload))
-        .setMimeType(ContentService.MimeType.JSON);
+    else {
+        return ContentService.createTextOutput(JSON.stringify(responsePayload))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
 }
 /**
  * POSTリクエストハンドラ
