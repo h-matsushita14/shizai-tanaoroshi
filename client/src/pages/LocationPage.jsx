@@ -11,8 +11,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // 追加
 import InteractiveMap from '../components/InteractiveMap';
 import InventoryFormDialog from '../components/InventoryFormDialog';
 
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
-console.log("GAS_WEB_APP_URL:", GAS_WEB_APP_URL);
+import { sendGetRequest } from '../api/gas'; // 追加
+
+// const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL; // 削除
+// console.log("GAS_WEB_APP_URL:", GAS_WEB_APP_URL); // 削除
 const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
@@ -46,11 +48,7 @@ function LocationPage() {
         return;
       }
       try {
-        const requestUrl = `${GAS_WEB_APP_URL}?action=getLocations`;
-        console.log("Requesting URL:", requestUrl);
-
-        const response = await fetch(requestUrl);
-        const result = await response.json();
+        const result = await sendGetRequest('getLocations'); // 変更
 
         console.log("Response from Google Apps Script:", result);
 
