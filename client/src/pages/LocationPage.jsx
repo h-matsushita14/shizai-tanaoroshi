@@ -12,7 +12,7 @@ import InteractiveMap from '../components/InteractiveMap';
 import InventoryFormDialog from '../components/InventoryFormDialog';
 
 import { sendGetRequest } from '../api/gas'; // sendGetRequestはonLocationsUpdatedで必要になるため残す
-import { useMasterData } } from '../contexts/MasterDataContext'; // useMasterData をインポート
+import { useMasterData } from '../contexts/MasterDataContext'; // useMasterData をインポート
 
 // const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL; // 削除
 // console.log("GAS_WEB_APP_URL:", GAS_WEB_APP_URL); // 削除
