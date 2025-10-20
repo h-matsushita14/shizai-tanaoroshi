@@ -152,7 +152,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                       {product["internalName"] || '-'} {/* 変更 */}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
-                      {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleString() : '-'} {/* toLocaleString() に変更 */}
+                      {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleDateString() : '-'} {/* toLocaleDateString() に変更 */}
                     </Typography>
                     <Tooltip
                       title={
@@ -271,7 +271,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                           )}
                         </TableCell>
                         <TableCell>
-                          {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleString() : '-'}
+                          {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleDateString() : '-'} {/* toLocaleDateString() に変更 */}
                         </TableCell>
                       </TableRow>
                     );
