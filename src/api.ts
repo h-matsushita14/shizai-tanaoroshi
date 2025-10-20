@@ -181,6 +181,7 @@ function getMasterData() {
     locations: formattedLocations, // 階層構造のロケーションデータ
     locationProductMappings, // 元のデータも残しておく
   };
+}
 
 /**
  * GETリクエストハンドラ
