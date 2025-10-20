@@ -66,17 +66,17 @@ function getMasterData() {
     return mapping;
   });
 
-  // Stock_Summary
-  const stockSummarySheet = ss.getSheetByName("Stock_Summary");
-  // if (!stockSummarySheet) throw new Error("Stock_Summaryシートが見つかりません。"); // エラーをスローしない
-  const stockSummaryData = stockSummarySheet ? stockSummarySheet.getDataRange().getValues() : [];
-  const stockSummaryHeaders = stockSummaryData.length > 0 ? stockSummaryData.shift() || [] : [];
-  const stockSummaries = stockSummaryData.map(row => {
-    const summary: { [key: string]: any } = {};
-    stockSummaryHeaders.forEach((header, index) => {
-      summary[header] = row[index];
+  // Inventory_Records
+  const inventoryRecordsSheet = ss.getSheetByName("Inventory_Records");
+  if (!inventoryRecordsSheet) throw new Error("Inventory_Recordsシートが見つかりません。");
+  const inventoryRecordsData = inventoryRecordsSheet.getDataRange().getValues();
+  const inventoryRecordsHeaders = inventoryRecordsData.shift() || [];
+  const inventoryRecords = inventoryRecordsData.map(row => {
+    const record: { [key: string]: any } = {};
+    inventoryRecordsHeaders.forEach((header, index) => {
+      record[header] = row[index];
     });
-    return summary;
+    return record;
   });
 
   // ロケーションデータを階層構造に変換
@@ -129,17 +129,34 @@ function getMasterData() {
       .map(mapping => {
         const product = products.find(p => p["商品コード"] === mapping["商品コード"]);
         if (product) {
-          // Stock_Summaryから棚卸数量を取得
-          const stock = stockSummaries.find(s =>
-            s["ロケーションID"] === locationId && s["商品ID"] === product["商品コード"]
+          // Inventory_Recordsから棚卸数量と記録日時を取得
+          const recordsForProduct = inventoryRecords.filter(r =>
+            r["ロケーションID"] === locationId && r["商品コード"] === product["商品コード"]
           );
+
+          let totalInventoryQuantity = 0;
+          let latestRecordedDate: Date | null = null;
+
+          recordsForProduct.forEach(record => {
+            totalInventoryQuantity += (record["ロット数量"] || 0) * (record["ロット単位"] ? parseInt(record["ロット単位"].match(/(\d+)/)?.[1] || '1') : 1);
+            totalInventoryQuantity += (record["バラ数量"] || 0);
+
+            const recordDate = new Date(record["記録日時"]);
+            if (latestRecordedDate === null || recordDate > latestRecordedDate) {
+              latestRecordedDate = recordDate;
+            }
+          });
+
           return {
             productCode: product["商品コード"],
             productName: product["商品名"],
+            internalName: product["社内名称"],
             unitPrice: product["単価"],
             caseQuantity: product["ケース入数"],
             pieceUnit: product["バラ単位"],
-            inventoryQuantity: stock ? stock["棚卸数量"] : 0, // 棚卸数量
+            lotUnit: product["ロット単位"],
+            inventoryQuantity: totalInventoryQuantity, // Inventory_Recordsから計算
+            lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null, // 直近の記録日時
           };
         }
         return null;

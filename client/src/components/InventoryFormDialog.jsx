@@ -145,22 +145,20 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
           isMobileOrTablet ? (
             <List>
               {products.map((product) => (
-                <ListItem key={product["商品コード"]} divider sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
+                <ListItem key={product["productCode"]} divider sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}> {/* key を productCode に変更 */}
                   {/* 1行目: 社内名称、直近の記録日、詳細ボタン */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                     <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
-                      {product["社内名称"] || '-'}
+                      {product["internalName"] || '-'} {/* 変更 */}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
-                      {product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}
+                      {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleString() : '-'} {/* toLocaleString() に変更 */}
                     </Typography>
                     <Tooltip
                       title={
                         <Box>
-                          <Typography variant="body2">商品コード: {product["商品コード"]}</Typography>
-                          <Typography variant="body2">商品名: {product["商品名"]}</Typography>
-                          <Typography variant="body2">棚卸数量: {product["棚卸数量"] || '-'}</Typography>
-                          <Typography variant="body2">記録日時: {product["記録日時"] ? new Date(product["記録日時"]).toLocaleString() : '-'}</Typography>
+                          <Typography variant="body2">商品コード: {product["productCode"]}</Typography> {/* 変更 */}
+                          <Typography variant="body2">商品名: {product["productName"]}</Typography> {/* 変更 */}
                         </Box>
                       }
                       arrow
@@ -177,8 +175,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                   {/* 2行目: ロット数量、ロット単位、バラ数量、バラ単位 */}
                   <Box sx={{ mt: 0.5, width: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
                     {(() => {
-                      const lotUnit = formatUnit(product["ロット単位"]);
-                      const looseUnit = formatUnit(product["バラ単位"]);
+                      const lotUnit = formatUnit(product["lotUnit"]); // 変更
+                      const looseUnit = formatUnit(product["pieceUnit"]); // 変更
 
                       if (!lotUnit && !looseUnit) {
                         return null;
@@ -190,8 +188,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["商品コード"]]?.lot || ''}
-                                onChange={(e) => handleQuantityChange(product["商品コード"], 'lot', e.target.value)}
+                                value={quantities[product["productCode"]]?.lot || ''}
+                                onChange={(e) => handleQuantityChange(product["productCode"], 'lot', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
                                 sx={{ width: '70px', mr: 0.5 }}
@@ -203,8 +201,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["商品コード"]]?.loose || ''}
-                                onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
+                                value={quantities[product["productCode"]]?.loose || ''}
+                                onChange={(e) => handleQuantityChange(product["productCode"], 'loose', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
                                 sx={{ width: '70px', mr: 0.5 }}
@@ -227,31 +225,31 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                     <TableCell>商品コード</TableCell>
                     <TableCell>商品名</TableCell>
                     <TableCell>社内名称</TableCell>
-                    <TableCell align="center">直近の記録日</TableCell> {/* 変更 */}
+                    <TableCell>直近の記録日</TableCell> {/* align="center" を削除 */}
                     <TableCell align="center" colSpan={2}>数量</TableCell> {/* ロット数量とバラ数量のヘッダーを統合 */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {products.map((product) => {
-                    const lotUnit = formatUnit(product["ロット単位"]);
-                    const looseUnit = formatUnit(product["バラ単位"]);
+                    const lotUnit = formatUnit(product["lotUnit"]); // 変更
+                    const looseUnit = formatUnit(product["pieceUnit"]); // 変更
 
                     return (
-                      <TableRow key={product["商品コード"]}>
-                        <TableCell>{product["商品コード"]}</TableCell>
-                        <TableCell>{product["商品名"]}</TableCell>
-                        <TableCell>{product["社内名称"]}</TableCell>
-                        <TableCell align="right">
-                          {product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}
+                      <TableRow key={product["productCode"]}> {/* key を productCode に変更 */}
+                        <TableCell>{product["productCode"]}</TableCell>
+                        <TableCell>{product["productName"]}</TableCell>
+                        <TableCell>{product["internalName"]}</TableCell> {/* 変更 */}
+                        <TableCell>
+                          {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleString() : '-'} {/* toLocaleString() に変更 */}
                         </TableCell>
-                        <TableCell align="right" sx={{ width: '100px' }}>
+                        <TableCell sx={{ width: '100px' }}>
                           {/* ロット数量入力欄 */}
                           {lotUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["商品コード"]]?.lot || ''}
-                                onChange={(e) => handleQuantityChange(product["商品コード"], 'lot', e.target.value)}
+                                value={quantities[product["productCode"]]?.lot || ''}
+                                onChange={(e) => handleQuantityChange(product["productCode"], 'lot', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
                                 sx={{ width: '70px', mr: 0.5 }}
@@ -260,14 +258,14 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             </Box>
                           )}
                         </TableCell>
-                        <TableCell align="right" sx={{ width: '100px' }}>
+                        <TableCell sx={{ width: '100px' }}>
                           {/* バラ数量入力欄 */}
                           {looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["商品コード"]]?.loose || ''}
-                                onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
+                                value={quantities[product["productCode"]]?.loose || ''}
+                                onChange={(e) => handleQuantityChange(product["productCode"], 'loose', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
                                 sx={{ width: '70px', mr: 0.5 }}
