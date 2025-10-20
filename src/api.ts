@@ -68,9 +68,9 @@ function getMasterData() {
 
   // Stock_Summary
   const stockSummarySheet = ss.getSheetByName("Stock_Summary");
-  if (!stockSummarySheet) throw new Error("Stock_Summaryシートが見つかりません。");
-  const stockSummaryData = stockSummarySheet.getDataRange().getValues();
-  const stockSummaryHeaders = stockSummaryData.shift() || [];
+  // if (!stockSummarySheet) throw new Error("Stock_Summaryシートが見つかりません。"); // エラーをスローしない
+  const stockSummaryData = stockSummarySheet ? stockSummarySheet.getDataRange().getValues() : [];
+  const stockSummaryHeaders = stockSummaryData.length > 0 ? stockSummaryData.shift() || [] : [];
   const stockSummaries = stockSummaryData.map(row => {
     const summary: { [key: string]: any } = {};
     stockSummaryHeaders.forEach((header, index) => {
