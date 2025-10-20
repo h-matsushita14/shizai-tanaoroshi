@@ -327,16 +327,16 @@ function LocationPage() {
                 <Box sx={{ textAlign: 'center', mt: 4 }}>
                   {selectedCategory ? (
                     <>
-                      <Typography variant="h6" component="div">
-                        ▼
+                      <Typography variant="h6" component="div" sx={{ mb: 1 }}> {/* mb を追加 */}
+                        保管場所選択
                       </Typography>
                       <Typography variant="h6" component="div">
-                        保管場所選択
+                        ▼
                       </Typography>
                     </>
                   ) : (
                     <>
-                      <Typography variant="h6" component="div">
+                      <Typography variant="h6" component="div" sx={{ mb: 1 }}> {/* mb を追加 */}
                         ロケーション選択
                       </Typography>
                       <Typography variant="h6" component="div">
@@ -350,7 +350,7 @@ function LocationPage() {
           </Box>
 
           <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
-            <Toolbar sx={{ flexDirection: 'column', alignItems: 'stretch', py: 1 }}> {/* 2行構成にするためflexDirection: 'column' */}
+            <Toolbar sx={{ flexDirection: 'column', alignItems: 'stretch', pt: 2 }}> {/* 2行構成にするためflexDirection: 'column' */}
               {/* 上の行: カテゴリ選択ボタン */}
               <Box sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative', width: '100%', mb: 1 }}>
                 {locations.map((group) => (
@@ -391,7 +391,7 @@ function LocationPage() {
               {selectedCategory && (
                 <Box sx={{ flexShrink: 0, zIndex: 1, width: '100%', px: 2 }}>
                   <FormControl fullWidth>
-                    <InputLabel id="storage-area-select-label" sx={{ color: 'white' }} shrink>保管場所</InputLabel> {/* shrink を追加 */}
+                    <InputLabel id="storage-area-select-label" sx={{ color: 'white' }}>保管場所</InputLabel> {/* shrink を削除 */}
                     <Select
                       labelId="storage-area-select-label"
                       id="storage-area-area-select"
