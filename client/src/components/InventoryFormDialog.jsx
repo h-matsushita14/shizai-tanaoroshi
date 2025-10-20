@@ -226,10 +226,9 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                   <TableRow>
                     <TableCell>商品コード</TableCell>
                     <TableCell>商品名</TableCell>
-                    <TableCell>社内名称</TableCell> {/* 追加 */}
-                    <TableCell align="center">直近の記録日時</TableCell> {/* 変更 */}
-                    <TableCell align="center">ロット数量</TableCell> {/* 変更 */}
-                    <TableCell align="center">バラ数量</TableCell> {/* 変更 */}
+                    <TableCell>社内名称</TableCell>
+                    <TableCell align="center">直近の記録日</TableCell> {/* 変更 */}
+                    <TableCell align="center" colSpan={2}>数量</TableCell> {/* ロット数量とバラ数量のヘッダーを統合 */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -237,14 +236,14 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                     const lotUnit = formatUnit(product["ロット単位"]);
                     const looseUnit = formatUnit(product["バラ単位"]);
 
-                    const isSameUnit = lotUnit && looseUnit && lotUnit === looseUnit;
-
                     return (
                       <TableRow key={product["商品コード"]}>
                         <TableCell>{product["商品コード"]}</TableCell>
                         <TableCell>{product["商品名"]}</TableCell>
-                        <TableCell>{product["社内名称"]}</TableCell> {/* 追加 */}
-                        <TableCell align="right">{product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}</TableCell> {/* 変更 */}
+                        <TableCell>{product["社内名称"]}</TableCell>
+                        <TableCell align="right">
+                          {product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}
+                        </TableCell>
                         <TableCell align="right" sx={{ width: '100px' }}>
                           {/* ロット数量入力欄 */}
                           {lotUnit && (
