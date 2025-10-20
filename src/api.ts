@@ -138,7 +138,9 @@ function getMasterData() {
           let latestRecordedDate: Date | null = null;
 
           recordsForProduct.forEach(record => {
-            totalInventoryQuantity += (record["ロット数量"] || 0) * (record["ロット単位"] ? parseInt(record["ロット単位"].match(/(\d+)/)?.[1] || '1') : 1);
+            // ロット単位の数値部分を抽出して計算に利用
+            const lotUnitValue = record["ロット単位"] ? parseInt(String(record["ロット単位"]).match(/(\d+)/)?.[1] || '1') : 1;
+            totalInventoryQuantity += (record["ロット数量"] || 0) * lotUnitValue;
             totalInventoryQuantity += (record["バラ数量"] || 0);
 
             const recordDate = new Date(record["記録日時"]);
@@ -159,6 +161,13 @@ function getMasterData() {
             lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null, // 直近の記録日時
           };
         }
+        Logger.log("Debug: Product in productsInLocation - " + JSON.stringify({
+          productCode: mapping["商品コード"],
+          internalName: product ? product["社内名称"] : "N/A",
+          lotUnit: product ? product["ロット単位"] : "N/A",
+          pieceUnit: product ? product["バラ単位"] : "N/A",
+          lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null,
+        }));
         return null;
       })
       .filter(Boolean); // nullを除外

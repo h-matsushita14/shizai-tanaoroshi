@@ -225,25 +225,22 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                     <TableCell>商品コード</TableCell>
                     <TableCell>商品名</TableCell>
                     <TableCell>社内名称</TableCell>
-                    <TableCell>直近の記録日</TableCell> {/* align="center" を削除 */}
-                    <TableCell align="center" colSpan={2}>数量</TableCell> {/* ロット数量とバラ数量のヘッダーを統合 */}
+                    <TableCell align="center">ロット数量</TableCell> {/* 変更 */}
+                    <TableCell align="center">バラ数量</TableCell> {/* 変更 */}
+                    <TableCell>直近の記録日</TableCell> {/* 変更 */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {products.map((product) => {
-                    const lotUnit = formatUnit(product["lotUnit"]); // 変更
-                    const looseUnit = formatUnit(product["pieceUnit"]); // 変更
+                    const lotUnit = formatUnit(product["lotUnit"]);
+                    const looseUnit = formatUnit(product["pieceUnit"]);
 
                     return (
                       <TableRow key={product["productCode"]}> {/* key を productCode に変更 */}
                         <TableCell>{product["productCode"]}</TableCell>
                         <TableCell>{product["productName"]}</TableCell>
                         <TableCell>{product["internalName"]}</TableCell> {/* 変更 */}
-                        <TableCell>
-                          {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleString() : '-'} {/* toLocaleString() に変更 */}
-                        </TableCell>
-                        <TableCell sx={{ width: '100px' }}>
-                          {/* ロット数量入力欄 */}
+                        <TableCell sx={{ width: '100px' }}> {/* ロット数量入力欄 */}
                           {lotUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
@@ -258,8 +255,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             </Box>
                           )}
                         </TableCell>
-                        <TableCell sx={{ width: '100px' }}>
-                          {/* バラ数量入力欄 */}
+                        <TableCell sx={{ width: '100px' }}> {/* バラ数量入力欄 */}
                           {looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
@@ -273,6 +269,9 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                               <Typography variant="body2">{looseUnit}</Typography>
                             </Box>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          {product["lastRecordedDate"] ? new Date(product["lastRecordedDate"]).toLocaleString() : '-'}
                         </TableCell>
                       </TableRow>
                     );
