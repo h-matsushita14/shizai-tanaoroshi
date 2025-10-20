@@ -350,111 +350,80 @@ function LocationPage() {
           </Box>
 
           <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
-            <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative', minHeight: '56px' }}>
-              {locations.map((group) => (
-                <Button
-                  key={group.category}
-                  color="inherit"
-                  onClick={() => {
-                    setSelectedCategory(group.category);
-                  }}
-                  sx={{
-                    flexShrink: 0,
-                    fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
-                    borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
-                    position: 'relative',
-                  }}
-                >
-                  {group.category}
-                  {selectedCategory === group.category && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: -15,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        color: 'white',
-                        fontSize: '1.5rem',
-                        lineHeight: 1,
-                      }}
-                    >
-                      ▼
-                    </Box>
-                  )}
-                </Button>
-              ))}
-            </Toolbar>
-
-            {selectedCategory && (
-              <Box sx={{ py: 1, flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1, width: '100%' }}>
-                <FormControl fullWidth>
-                  <InputLabel id="storage-area-select-label">保管場所</InputLabel>
-                  <Select
-                    labelId="storage-area-select-label"
-                    id="storage-area-select"
-                    value={selectedStorageArea}
-                    label="保管場所"
-                    onChange={(e) => {
-                      setSelectedStorageArea(e.target.value);
-                      const selectedArea = locations
-                        .find(group => group.category === selectedCategory)?.storageAreas
-                        .find(area => area.name === e.target.value);
-                    if (selectedArea) {
-                      handleStorageLocationSelect(selectedArea.name, selectedArea.id);
-                    }
+            <Toolbar sx={{ flexDirection: 'column', alignItems: 'stretch', py: 1 }}> {/* 2行構成にするためflexDirection: 'column' */}
+              {/* 上の行: カテゴリ選択ボタン */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative', width: '100%', mb: 1 }}>
+                {locations.map((group) => (
+                  <Button
+                    key={group.category}
+                    color="inherit"
+                    onClick={() => {
+                      setSelectedCategory(group.category);
+                    }}
+                    sx={{
+                      flexShrink: 0,
+                      fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
+                      borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
+                      position: 'relative',
                     }}
                   >
-                    <MenuItem value="">
-                      <em>選択してください</em>
-                    </MenuItem>
-                    {locations
-                      .find(group => group.category === selectedCategory)?.storageAreas
-                      .map((area) => (
-                        <MenuItem key={area.id} value={area.name}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                            <Typography>{area.name}</Typography>
-                            {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" fontSize="small" />}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
+                    {group.category}
+                    {selectedCategory === group.category && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: -15,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          color: 'white',
+                          fontSize: '1.5rem',
+                          lineHeight: 1,
+                        }}
+                      >
+                        ▼
+                      </Box>
+                    )}
+                  </Button>
+                ))}
               </Box>
-            )}
-          </AppBar>
-            <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative' }}>
-              {locations.map((group) => (
-                <Button
-                  key={group.category}
-                  color="inherit"
-                  onClick={() => {
-                    setSelectedCategory(group.category);
-                  }}
-                  sx={{
-                    flexShrink: 0,
-                    fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
-                    borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
-                    position: 'relative',
-                  }}
-                >
-                  {group.category}
-                  {selectedCategory === group.category && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: -15,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        color: 'white',
-                        fontSize: '1.5rem',
-                        lineHeight: 1,
+
+              {/* 下の行: 保管場所選択欄 */}
+              {selectedCategory && (
+                <Box sx={{ flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1, width: '100%', px: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel id="storage-area-select-label">保管場所</InputLabel>
+                    <Select
+                      labelId="storage-area-select-label"
+                      id="storage-area-area-select"
+                      value={selectedStorageArea}
+                      label="保管場所"
+                      onChange={(e) => {
+                        setSelectedStorageArea(e.target.value);
+                        const selectedArea = locations
+                          .find(group => group.category === selectedCategory)?.storageAreas
+                          .find(area => area.name === e.target.value);
+                      if (selectedArea) {
+                        handleStorageLocationSelect(selectedArea.name, selectedArea.id);
+                      }
                       }}
                     >
-                      ▼
-                    </Box>
-                  )}
-                </Button>
-              ))}
+                      <MenuItem value="">
+                        <em>選択してください</em>
+                      </MenuItem>
+                      {locations
+                        .find(group => group.category === selectedCategory)?.storageAreas
+                        .map((area) => (
+                          <MenuItem key={area.id} value={area.name}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <Typography>{area.name}</Typography>
+                              {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" fontSize="small" />}
+                            </Box>
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              )}
             </Toolbar>
           </AppBar>
         </>
