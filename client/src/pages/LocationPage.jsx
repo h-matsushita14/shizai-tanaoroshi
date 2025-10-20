@@ -368,21 +368,6 @@ function LocationPage() {
                     }}
                   >
                     {group.category}
-                    {selectedCategory === group.category && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: -15,
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          color: 'white',
-                          fontSize: '1.5rem',
-                          lineHeight: 1,
-                        }}
-                      >
-                        ▼
-                      </Box>
-                    )}
                   </Button>
                 ))}
               </Box>
