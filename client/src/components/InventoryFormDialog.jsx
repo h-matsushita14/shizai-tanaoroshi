@@ -146,27 +146,14 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
             <List>
               {products.map((product) => (
                 <ListItem key={product["商品コード"]} divider sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <ListItemText
-                      primary={
-                        <Box>
-                          {/* ラベルを削除 */}
-                          <Typography
-                            variant="subtitle1"
-                            component="span"
-                            sx={{
-                              fontWeight: 'bold',
-                              bgcolor: 'grey.100', // 目立たない程度の薄いグレー
-                              p: 0.5, // パディング
-                              borderRadius: '4px', // 角を丸くする
-                              display: 'inline-block', // 背景色が値の幅に収まるように
-                            }}
-                          >
-                            {product["社内名称"] || '-'}
-                          </Typography>
-                        </Box>
-                      }
-                    />
+                  {/* 1行目: 社内名称、直近の記録日、詳細ボタン */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
+                      {product["社内名称"] || '-'}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
+                      {product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}
+                    </Typography>
                     <Tooltip
                       title={
                         <Box>
@@ -181,13 +168,14 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                       enterTouchDelay={0}
                       leaveTouchDelay={5000}
                     >
-                      <IconButton size="small" sx={{ alignSelf: 'flex-start', mt: 0.5 }}>
+                      <IconButton size="small">
                         <InfoOutlinedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   </Box>
-                  {/* 入力欄をListItemTextの外に移動 */}
-                  <Box sx={{ mt: 0.5, width: '100%' }}>
+
+                  {/* 2行目: ロット数量、ロット単位、バラ数量、バラ単位 */}
+                  <Box sx={{ mt: 0.5, width: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
                     {(() => {
                       const lotUnit = formatUnit(product["ロット単位"]);
                       const looseUnit = formatUnit(product["バラ単位"]);
@@ -196,28 +184,10 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                         return null;
                       }
 
-                      if (lotUnit && looseUnit && lotUnit === looseUnit) {
-                        return (
-                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                            <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>数量:</Typography>
-                            <TextField
-                              type="number"
-                              value={quantities[product["商品コード"]]?.loose || ''}
-                              onChange={(e) => handleQuantityChange(product["商品コード"], 'loose', e.target.value)}
-                              inputProps={{ min: 0 }}
-                              size="small"
-                              sx={{ width: '70px', mr: 0.5 }}
-                            />
-                            <Typography variant="body2">{looseUnit}</Typography>
-                          </Box>
-                        );
-                      }
-
                       return (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mt: 1, gap: 1 }}> {/* 変更: flexWrap と gap を追加 */}
+                        <>
                           {lotUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>ロット数量:</Typography>
                               <TextField
                                 type="number"
                                 value={quantities[product["商品コード"]]?.lot || ''}
@@ -231,7 +201,6 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                           )}
                           {looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>バラ数量:</Typography>
                               <TextField
                                 type="number"
                                 value={quantities[product["商品コード"]]?.loose || ''}
@@ -243,7 +212,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                               <Typography variant="body2">{looseUnit}</Typography>
                             </Box>
                           )}
-                        </Box>
+                        </>
                       );
                     })()}
                   </Box>
@@ -257,10 +226,10 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                   <TableRow>
                     <TableCell>商品コード</TableCell>
                     <TableCell>商品名</TableCell>
-                    <TableCell align="center">棚卸数量</TableCell>
-                    <TableCell align="center">記録日</TableCell>
-                    <TableCell align="center">ロット数量</TableCell>
-                    <TableCell align="center">バラ数量</TableCell>
+                    <TableCell>社内名称</TableCell> {/* 追加 */}
+                    <TableCell align="center">直近の記録日時</TableCell> {/* 変更 */}
+                    <TableCell align="center">ロット数量</TableCell> {/* 変更 */}
+                    <TableCell align="center">バラ数量</TableCell> {/* 変更 */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -274,11 +243,11 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                       <TableRow key={product["商品コード"]}>
                         <TableCell>{product["商品コード"]}</TableCell>
                         <TableCell>{product["商品名"]}</TableCell>
-                        <TableCell align="right">{product["棚卸数量"] || '-'}</TableCell>
-                        <TableCell align="right">{product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell>{product["社内名称"]}</TableCell> {/* 追加 */}
+                        <TableCell align="right">{product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}</TableCell> {/* 変更 */}
                         <TableCell align="right" sx={{ width: '100px' }}>
-                          {/* ロットとバラの単位が同じでない場合、またはロット単位のみ存在する場合に表示 */}
-                          {!isSameUnit && lotUnit && (
+                          {/* ロット数量入力欄 */}
+                          {lotUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
                                 type="number"
@@ -293,8 +262,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                           )}
                         </TableCell>
                         <TableCell align="right" sx={{ width: '100px' }}>
-                          {/* バラ単位が存在し、かつ (ロットとバラの単位が同じ場合、またはロット単位がない場合) に表示 */}
-                          {looseUnit && (isSameUnit || !lotUnit) && (
+                          {/* バラ数量入力欄 */}
+                          {looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
                                 type="number"
