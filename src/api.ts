@@ -158,15 +158,15 @@ function getMasterData() {
             pieceUnit: product["バラ単位"],
             lotUnit: product["ロット単位"],
             inventoryQuantity: totalInventoryQuantity, // Inventory_Recordsから計算
-            lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null, // 直近の記録日時
+            lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null, // 直近の記録日時を追加
           };
         }
         Logger.log("Debug: Product in productsInLocation - " + JSON.stringify({
           productCode: mapping["商品コード"],
-          internalName: product ? product["社内名称"] : "N/A",
-          lotUnit: product ? product["ロット単位"] : "N/A",
-          pieceUnit: product ? product["バラ単位"] : "N/A",
-          lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null,
+          internalName: "N/A", // product が null のため
+          lotUnit: "N/A", // product が null のため
+          pieceUnit: "N/A", // product が null のため
+          lastRecordedDate: null, // product が null のため latestRecordedDate も null
         }));
         return null;
       })
