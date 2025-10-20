@@ -41,25 +41,6 @@ function LocationPage() {
     setMobileOpen(!mobileOpen);
   };
 
-  // ロケーションデータを再フェッチする関数 (MasterDataProviderのsetMasterDataを呼び出す)
-  const fetchLocations = useCallback(async () => {
-    setIsLoadingMasterData(true);
-    setMasterDataError(null);
-    try {
-      const result = await sendGetRequest('getMasterData'); // getMasterDataを呼び出す
-      if (result.status === 'success') {
-        setMasterData(result.data);
-      } else {
-        throw new Error(result.message || 'データの取得に失敗しました。');
-      }
-    } catch (err) {
-      setMasterDataError(err.message);
-      console.error('Error fetching master data:', err);
-    } finally {
-      setIsLoadingMasterData(false);
-    }
-  }, [setMasterData, setIsLoadingMasterData, setMasterDataError]);
-
   useEffect(() => {
     if (!isDesktop) {
         setSelectedStorageArea('');
@@ -454,7 +435,6 @@ function LocationPage() {
           locationName={selectedLocationForForm.name}
           locationDetail={selectedLocationForForm.detail}
           initialProducts={selectedLocationForForm.products} // 製品情報を追加
-          onLocationsUpdated={fetchLocations} // ロケーションリスト更新後に再フェッチする関数を渡す
         />
       )}
     </Box>

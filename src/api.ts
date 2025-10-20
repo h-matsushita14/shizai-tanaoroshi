@@ -66,13 +66,121 @@ function getMasterData() {
     return mapping;
   });
 
+  // Stock_Summary
+  const stockSummarySheet = ss.getSheetByName("Stock_Summary");
+  if (!stockSummarySheet) throw new Error("Stock_Summaryシートが見つかりません。");
+  const stockSummaryData = stockSummarySheet.getDataRange().getValues();
+  const stockSummaryHeaders = stockSummaryData.shift() || [];
+  const stockSummaries = stockSummaryData.map(row => {
+    const summary: { [key: string]: any } = {};
+    stockSummaryHeaders.forEach((header, index) => {
+      summary[header] = row[index];
+    });
+    return summary;
+  });
+
+  // ロケーションデータを階層構造に変換
+  const groupedLocations: { [key: string]: any } = {};
+
+  locationsMaster.forEach(loc => {
+    const category = loc["ロケーション"]; // 例: 資材室, 出荷準備室
+    const storageAreaName = loc["保管場所"]; // 例: 棚A, 棚B
+    const detailName = loc["詳細①"]; // 例: 上段, 中段, 下段
+    const locationId = loc["ロケーションID"];
+
+    if (!groupedLocations[category]) {
+      groupedLocations[category] = {
+        category: category,
+        storageAreas: [],
+        storageAreaMap: {}, // 重複チェック用
+      };
+    }
+
+    const currentCategory = groupedLocations[category];
+    let currentStorageArea = currentCategory.storageAreaMap[storageAreaName];
+
+    if (!currentStorageArea) {
+      currentStorageArea = {
+        id: locationId, // 保管場所のIDとして最初のロケーションIDを使用
+        name: storageAreaName,
+        details: [],
+        detailMap: {}, // 重複チェック用
+        inventoryStatus: 'unrecorded', // デフォルト
+      };
+      currentCategory.storageAreas.push(currentStorageArea);
+      currentCategory.storageAreaMap[storageAreaName] = currentStorageArea;
+    }
+
+    let currentDetail = currentStorageArea.detailMap[detailName];
+    if (!currentDetail) {
+      currentDetail = {
+        id: locationId, // 詳細のIDとしてロケーションIDを使用
+        name: detailName,
+        products: [],
+        inventoryStatus: 'unrecorded', // デフォルト
+      };
+      currentStorageArea.details.push(currentDetail);
+      currentStorageArea.detailMap[detailName] = currentDetail;
+    }
+
+    // ロケーションに紐づく商品情報を追加
+    const productsInLocation = locationProductMappings
+      .filter(mapping => mapping["ロケーションID"] === locationId)
+      .map(mapping => {
+        const product = products.find(p => p["商品コード"] === mapping["商品コード"]);
+        if (product) {
+          // Stock_Summaryから棚卸数量を取得
+          const stock = stockSummaries.find(s =>
+            s["ロケーションID"] === locationId && s["商品ID"] === product["商品コード"]
+          );
+          return {
+            productCode: product["商品コード"],
+            productName: product["商品名"],
+            unitPrice: product["単価"],
+            caseQuantity: product["ケース入数"],
+            pieceUnit: product["バラ単位"],
+            inventoryQuantity: stock ? stock["棚卸数量"] : 0, // 棚卸数量
+          };
+        }
+        return null;
+      })
+      .filter(Boolean); // nullを除外
+
+    currentDetail.products.push(...productsInLocation);
+
+    // 棚卸状況の更新
+    if (productsInLocation.length > 0 && productsInLocation.every(p => p.inventoryQuantity > 0)) {
+      currentDetail.inventoryStatus = 'recorded';
+    } else if (productsInLocation.length > 0 && productsInLocation.some(p => p.inventoryQuantity > 0)) {
+      currentDetail.inventoryStatus = 'partial'; // 一部入力済み
+    }
+
+    // 保管場所レベルの棚卸状況を更新
+    const allDetailsRecorded = currentStorageArea.details.every(d => d.inventoryStatus === 'recorded');
+    const someDetailsRecorded = currentStorageArea.details.some(d => d.inventoryStatus === 'recorded' || d.inventoryStatus === 'partial');
+
+    if (allDetailsRecorded) {
+      currentStorageArea.inventoryStatus = 'recorded';
+    } else if (someDetailsRecorded) {
+      currentStorageArea.inventoryStatus = 'partial';
+    }
+  });
+
+  const formattedLocations = Object.values(groupedLocations).map((group: any) => {
+    group.storageAreas = group.storageAreas.map((area: any) => {
+      delete area.detailMap; // 不要なマップを削除
+      return area;
+    });
+    delete group.storageAreaMap; // 不要なマップを削除
+    return group;
+  });
+
   return {
     products,
     suppliers,
-    locationsMaster,
-    locationProductMappings,
+    locations: formattedLocations, // 階層構造のロケーションデータ
+    locationProductMappings, // 元のデータも残しておく
   };
-}
 
 /**
  * GETリクエストハンドラ
