@@ -10,6 +10,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LocationProductRegistrationDialog from '../components/LocationProductRegistrationDialog'; // 追加
 
 import { sendGetRequest, sendPostRequest } from '@/api/gas';
+import { useMasterData } from '../contexts/MasterDataContext'; // useMasterData をインポート
 
 const LocationCard = ({ location, handleEditClick, handleProductRegistrationClick }) => (
   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -59,6 +60,8 @@ function LocationMasterPage() {
   // .envからGASウェブアプリのURLを取得
   const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
+  const { updateLocationsMaster } = useMasterData(); // updateLocationsMaster を取得
+
   useEffect(() => {
     fetchLocations();
   }, []);
@@ -74,6 +77,7 @@ function LocationMasterPage() {
           ...loc,
         }));
         setLocations(locationsWithId);
+        updateLocationsMaster(result.data); // MasterDataContext を更新
 
         // ユニークなリストを作成
         const uniqueLocs = [...new Set(result.data.map(loc => loc['ロケーション']).filter(Boolean))];

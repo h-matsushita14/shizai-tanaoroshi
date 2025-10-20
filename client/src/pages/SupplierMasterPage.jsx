@@ -24,6 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 
 import { sendGetRequest, sendPostRequest } from '@/api/gas';
+import { useMasterData } from '../contexts/MasterDataContext'; // useMasterData をインポート
 
 function SupplierMasterPage() {
   const [suppliers, setSuppliers] = useState([]);
@@ -53,6 +54,8 @@ function SupplierMasterPage() {
   // .envからGASウェブアプリのURLを取得
   const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
+  const { updateSuppliers } = useMasterData(); // updateSuppliers を取得
+
   // 仕入れ先データをGASから取得する関数
   const fetchSuppliers = async () => {
     setLoading(true); // データ取得開始時にローディングをtrueに
@@ -65,6 +68,7 @@ function SupplierMasterPage() {
           ...supplier,
         }));
         setSuppliers(suppliersWithId);
+        updateSuppliers(data.data); // MasterDataContext を更新
       } else {
         console.error('Failed to fetch suppliers:', data.message);
         alert('仕入れ先データの取得に失敗しました: ' + data.message);

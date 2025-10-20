@@ -7,6 +7,7 @@ import EditProductDialog from '../components/EditProductDialog';
 import ProductDetailsDialog from '../components/ProductDetailsDialog';
 
 import { sendGetRequest, sendPostRequest } from '../api/gas.js';
+import { useMasterData } from '../contexts/MasterDataContext'; // useMasterData をインポート
 
 // ProductCard コンポーネント
 const ProductCard = ({ product, handleViewDetails, handleEdit }) => (
@@ -58,6 +59,8 @@ function ProductMasterPage() {
   // .envからGASウェブアプリのURLを取得
   const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
 
+  const { updateProducts, updateSuppliers } = useMasterData(); // updateProducts と updateSuppliers を取得
+
   useEffect(() => {
     fetchProducts();
     fetchSuppliers(); // 仕入先データを取得
@@ -74,6 +77,7 @@ function ProductMasterPage() {
           ...product,
         }));
         setProducts(productsWithId);
+        updateProducts(result.data); // MasterDataContext を更新
 
         const lotUnitsSet = new Set(result.data.map(p => p['ロット単位']).filter(Boolean));
         const pieceUnitsSet = new Set(result.data.map(p => p['バラ単位']).filter(Boolean));
@@ -96,6 +100,7 @@ function ProductMasterPage() {
       const result = await sendGetRequest('getSuppliers');
       if (result.status === 'success') {
         setSuppliers(result.data);
+        updateSuppliers(result.data); // MasterDataContext を更新
       } else {
         console.error('Failed to fetch suppliers:', result.message);
       }

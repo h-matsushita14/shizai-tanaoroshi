@@ -73,7 +73,7 @@ if (import.meta.env.PROD) {
 
 ### ローカル開発環境での設定
 
-#### .env.local（gitignoreに追加）
+#### .env（gitignoreに追加）
 
 ```bash
 # ローカル開発用
@@ -90,7 +90,7 @@ VITE_GAS_API_URL=https://script.google.com/macros/s/PROD_ID/exec
 #### .gitignore
 
 ```
-.env.local
+.env
 ```
 
 ### 環境変数の確認方法

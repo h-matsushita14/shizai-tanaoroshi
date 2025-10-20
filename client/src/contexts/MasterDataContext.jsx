@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 
 const MasterDataContext = createContext(null);
 
@@ -7,6 +7,22 @@ export const MasterDataProvider = ({ children }) => {
   const [isLoadingMasterData, setIsLoadingMasterData] = useState(true);
   const [masterDataError, setMasterDataError] = useState(null);
 
+  const updateProducts = useCallback((newProducts) => {
+    setMasterData(prevData => ({ ...prevData, products: newProducts }));
+  }, []);
+
+  const updateSuppliers = useCallback((newSuppliers) => {
+    setMasterData(prevData => ({ ...prevData, suppliers: newSuppliers }));
+  }, []);
+
+  const updateLocationsMaster = useCallback((newLocationsMaster) => {
+    setMasterData(prevData => ({ ...prevData, locationsMaster: newLocationsMaster }));
+  }, []);
+
+  const updateLocationProductMappings = useCallback((newMappings) => {
+    setMasterData(prevData => ({ ...prevData, locationProductMappings: newMappings }));
+  }, []);
+
   const value = {
     masterData,
     setMasterData,
@@ -14,6 +30,10 @@ export const MasterDataProvider = ({ children }) => {
     setIsLoadingMasterData,
     masterDataError,
     setMasterDataError,
+    updateProducts,
+    updateSuppliers,
+    updateLocationsMaster,
+    updateLocationProductMappings,
   };
 
   return (
