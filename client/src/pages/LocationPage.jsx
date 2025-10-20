@@ -363,11 +363,26 @@ function LocationPage() {
                     sx={{
                       flexShrink: 0,
                       fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
-                      borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
+                      // borderBottom: selectedCategory === group.category ? '2px solid white' : 'none', // 削除
                       position: 'relative',
                     }}
                   >
                     {group.category}
+                    {selectedCategory === group.category && ( // 復活
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: -15,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          color: 'white',
+                          fontSize: '1.5rem',
+                          lineHeight: 1,
+                        }}
+                      >
+                        ▼
+                      </Box>
+                    )}
                   </Button>
                 ))}
               </Box>
@@ -376,7 +391,20 @@ function LocationPage() {
               {selectedCategory && (
                 <Box sx={{ flexShrink: 0, zIndex: 1, width: '100%', px: 2 }}>
                   <FormControl fullWidth>
-                    <InputLabel id="storage-area-select-label" sx={{ color: 'white' }}>保管場所</InputLabel> {/* shrink を削除 */}
+                    <InputLabel
+                      id="storage-area-select-label"
+                      sx={{
+                        color: 'white',
+                        '&.Mui-focused': {
+                          color: 'white', // フォーカス時のラベル色
+                        },
+                        '&.Mui-active': {
+                          color: 'white', // アクティブ時のラベル色
+                        },
+                      }}
+                    >
+                      保管場所
+                    </InputLabel>
                     <Select
                       labelId="storage-area-select-label"
                       id="storage-area-area-select"
