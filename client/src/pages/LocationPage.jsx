@@ -328,7 +328,7 @@ function LocationPage() {
                   {selectedCategory ? (
                     <>
                       <Typography variant="h6" component="div">
-                        ▲
+                        ▼
                       </Typography>
                       <Typography variant="h6" component="div">
                         保管場所選択
@@ -389,9 +389,9 @@ function LocationPage() {
 
               {/* 下の行: 保管場所選択欄 */}
               {selectedCategory && (
-                <Box sx={{ flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1, width: '100%', px: 2 }}>
+                <Box sx={{ flexShrink: 0, zIndex: 1, width: '100%', px: 2 }}> {/* bgcolor と boxShadow を削除 */}
                   <FormControl fullWidth>
-                    <InputLabel id="storage-area-select-label">保管場所</InputLabel>
+                    <InputLabel id="storage-area-select-label" sx={{ color: 'white' }}>保管場所</InputLabel> {/* color を追加 */}
                     <Select
                       labelId="storage-area-select-label"
                       id="storage-area-area-select"
@@ -406,6 +406,7 @@ function LocationPage() {
                         handleStorageLocationSelect(selectedArea.name, selectedArea.id);
                       }
                       }}
+                      sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '.MuiSvgIcon-root': { color: 'white' } }} // 選択された値と矢印の色も白に
                     >
                       <MenuItem value="">
                         <em>選択してください</em>
