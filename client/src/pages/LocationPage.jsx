@@ -289,9 +289,10 @@ function LocationPage() {
             flexDirection: 'column',
             position: 'absolute',
             top: effectiveFixedHeaderHeight,
-            bottom: '112px', // フッターと保管場所選択欄の高さ分を確保
+            bottom: '112px', // 新しいフッターの高さ分を確保
             left: 0,
             right: 0,
+            height: `calc(100vh - ${effectiveFixedHeaderHeight} - 112px)` // 高さを再計算
           }}>
             
             <Box
@@ -348,45 +349,79 @@ function LocationPage() {
             </Box>
           </Box>
 
-          {/* 保管場所選択欄をフッターの直前に移動 */}
-          {selectedCategory && (
-            <Box sx={{ py: 1, flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1, position: 'fixed', bottom: 56, width: '100%' }}>
-              <FormControl fullWidth>
-                <InputLabel id="storage-area-select-label">保管場所</InputLabel>
-                <Select
-                  labelId="storage-area-select-label"
-                  id="storage-area-select"
-                  value={selectedStorageArea}
-                  label="保管場所"
-                  onChange={(e) => {
-                    setSelectedStorageArea(e.target.value);
-                    const selectedArea = locations
-                      .find(group => group.category === selectedCategory)?.storageAreas
-                      .find(area => area.name === e.target.value);
+          <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
+            <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative', minHeight: '56px' }}>
+              {locations.map((group) => (
+                <Button
+                  key={group.category}
+                  color="inherit"
+                  onClick={() => {
+                    setSelectedCategory(group.category);
+                  }}
+                  sx={{
+                    flexShrink: 0,
+                    fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
+                    borderBottom: selectedCategory === group.category ? '2px solid white' : 'none',
+                    position: 'relative',
+                  }}
+                >
+                  {group.category}
+                  {selectedCategory === group.category && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -15,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: 'white',
+                        fontSize: '1.5rem',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ▼
+                    </Box>
+                  )}
+                </Button>
+              ))}
+            </Toolbar>
+
+            {selectedCategory && (
+              <Box sx={{ py: 1, flexShrink: 0, bgcolor: 'background.paper', zIndex: 1, boxShadow: 1, width: '100%' }}>
+                <FormControl fullWidth>
+                  <InputLabel id="storage-area-select-label">保管場所</InputLabel>
+                  <Select
+                    labelId="storage-area-select-label"
+                    id="storage-area-select"
+                    value={selectedStorageArea}
+                    label="保管場所"
+                    onChange={(e) => {
+                      setSelectedStorageArea(e.target.value);
+                      const selectedArea = locations
+                        .find(group => group.category === selectedCategory)?.storageAreas
+                        .find(area => area.name === e.target.value);
                     if (selectedArea) {
                       handleStorageLocationSelect(selectedArea.name, selectedArea.id);
                     }
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>選択してください</em>
-                  </MenuItem>
-                  {locations
-                    .find(group => group.category === selectedCategory)?.storageAreas
-                    .map((area) => (
-                      <MenuItem key={area.id} value={area.name}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                          <Typography>{area.name}</Typography>
-                          {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" fontSize="small" />}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
-            </Box>
-          )}
-
-          <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>選択してください</em>
+                    </MenuItem>
+                    {locations
+                      .find(group => group.category === selectedCategory)?.storageAreas
+                      .map((area) => (
+                        <MenuItem key={area.id} value={area.name}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                            <Typography>{area.name}</Typography>
+                            {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" fontSize="small" />}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
+          </AppBar>
             <Toolbar sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative' }}>
               {locations.map((group) => (
                 <Button
