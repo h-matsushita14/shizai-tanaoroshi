@@ -61,9 +61,9 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
           商品コード: productCode,
           ロケーションID: locationId,
           ロット数量: lotQuantity !== '' ? parseInt(lotQuantity, 10) : 0,
-          ロット単位: product["ロット単位"] || '',
+          ロット単位: product.lotUnit || '',
           バラ数量: looseQuantity !== '' ? parseInt(looseQuantity, 10) : 0,
-          バラ単位: product["バラ単位"] || '',
+          バラ単位: product.pieceUnit || '',
           記録時単価: product["単価"] || 0, // Product_Masterの単価を使用
           担当者: '未設定', // TODO: 担当者入力フィールドを追加
           備考: '', // TODO: 備考入力フィールドを追加
