@@ -1,3 +1,19 @@
+# 資材棚卸アプリケーション
+
+このプロジェクトは、資材の在庫管理を効率化するためのウェブアプリケーションです。
+
+## 概要
+
+React製のフロントエンドとGoogle Apps Script (GAS) を利用したバックエンドで構成されています。資材の保管場所（ロケーション）ごとに、在庫情報を登録・確認することができます。
+
+**主な機能:**
+*   **ロケーション管理**: 資材を保管する場所を登録・編集・削除します。
+*   **商品マスタ管理**: 取り扱う資材（商品）の情報を登録・編集・削除します。
+*   **在庫登録**: ロケーションに紐づけて、資材の在庫情報を登録します。
+*   **在庫一覧**: 現在の在庫状況を一覧で確認できます。
+
+---
+
 # フロントエンド（React + Vite）からGASへのAPI連携ベストプラクティス
 
 ## 環境変数の設定（重要）
@@ -53,21 +69,21 @@ Building with environment variables:
 
 ```javascript
 // src/config.js
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/YOUR_DEFAULT_DEPLOYMENT_ID/exec';
+const DEFAULT_GAS_URL = '''https://script.google.com/macros/s/YOUR_DEFAULT_DEPLOYMENT_ID/exec''';
 
 export const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL || DEFAULT_GAS_URL;
 
 // 開発時に警告を出す
 if (import.meta.env.DEV && !import.meta.env.VITE_GAS_API_URL) {
   console.warn(
-    '⚠️ VITE_GAS_API_URL is not set. Using default URL:',
+    '''⚠️ VITE_GAS_API_URL is not set. Using default URL:''',
     DEFAULT_GAS_URL
   );
 }
 
 // 本番環境でも確認
 if (import.meta.env.PROD) {
-  console.log('Using GAS URL:', GAS_WEB_APP_URL);
+  console.log('''Using GAS URL:''', GAS_WEB_APP_URL);
 }
 ```
 
@@ -98,10 +114,10 @@ VITE_GAS_API_URL=https://script.google.com/macros/s/PROD_ID/exec
 #### ブラウザコンソールで確認
 
 ```javascript
-console.log('GAS URL:', import.meta.env.VITE_GAS_API_URL);
-console.log('Mode:', import.meta.env.MODE);
-console.log('Is Dev:', import.meta.env.DEV);
-console.log('Is Prod:', import.meta.env.PROD);
+console.log('''GAS URL:''', import.meta.env.VITE_GAS_API_URL);
+console.log('''Mode:''', import.meta.env.MODE);
+console.log('''Is Dev:''', import.meta.env.DEV);
+console.log('''Is Prod:''', import.meta.env.PROD);
 ```
 
 #### ビルド後のソースで確認
@@ -129,20 +145,20 @@ const url = "https://script.google.com/macros/s/.../exec";
 
 ```javascript
 // src/config.js
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+const DEFAULT_GAS_URL = '''https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec''';
 
 export const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL || DEFAULT_GAS_URL;
 
 // 環境変数の状態をログ出力
 if (import.meta.env.DEV) {
-  console.log('🔧 Development mode');
+  console.log('''🔧 Development mode''');
   if (!import.meta.env.VITE_GAS_API_URL) {
-    console.warn('⚠️ VITE_GAS_API_URL not set, using default');
+    console.warn('''⚠️ VITE_GAS_API_URL not set, using default''');
   }
 }
 
 if (import.meta.env.PROD) {
-  console.log('🚀 Production mode, GAS URL:', GAS_WEB_APP_URL);
+  console.log('''🚀 Production mode, GAS URL:''', GAS_WEB_APP_URL);
 }
 ```
 
@@ -150,7 +166,7 @@ if (import.meta.env.PROD) {
 
 ```javascript
 // src/api/gas.js
-import { GAS_WEB_APP_URL } from '../config';
+import { GAS_WEB_APP_URL } from '''../config''';
 
 /**
  * GASへPOSTリクエストを送信する共通関数
@@ -165,28 +181,28 @@ export const sendPostRequest = async (action, additionalData = {}) => {
       ...additionalData
     };
     
-    console.log('Sending POST request:', requestBody);
+    console.log('''Sending POST request:''', requestBody);
     
     const response = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
+      method: '''POST''',
       headers: {
-        'Content-Type': 'application/json',
+        '''Content-Type''': '''application/json''',
       },
       body: JSON.stringify(requestBody),
     });
 
-    console.log('POST response status:', response.status);
+    console.log('''POST response status:''', response.status);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    console.log('POST response result:', result);
+    console.log('''POST response result:''', result);
     
     return result;
   } catch (err) {
-    console.error('POST request error:', err);
+    console.error('''POST request error:''', err);
     throw err;
   }
 };
@@ -205,22 +221,22 @@ export const sendGetRequest = async (action, params = {}) => {
     });
     
     const url = `${GAS_WEB_APP_URL}?${queryParams}`;
-    console.log('Sending GET request:', url);
+    console.log('''Sending GET request:''', url);
     
     const response = await fetch(url);
     
-    console.log('GET response status:', response.status);
+    console.log('''GET response status:''', response.status);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    console.log('GET response result:', result);
+    console.log('''GET response result:''', result);
     
     return result;
   } catch (err) {
-    console.error('GET request error:', err);
+    console.error('''GET request error:''', err);
     throw err;
   }
 };
@@ -229,8 +245,8 @@ export const sendGetRequest = async (action, params = {}) => {
 ### 3. コンポーネントでの使用例
 
 ```javascript
-import React, { useState, useEffect } from 'react';
-import { sendGetRequest, sendPostRequest } from '../api/gas';
+import React, { useState, useEffect } from '''react''';
+import { sendGetRequest, sendPostRequest } from '''../api/gas''';
 
 function ProductList() {
   const [products, setProducts] = useState([]);
@@ -246,16 +262,16 @@ function ProductList() {
     setError(null);
     
     try {
-      const result = await sendGetRequest('getProducts');
+      const result = await sendGetRequest('''getProducts''');
       
-      if (result.status === 'success') {
+      if (result.status === '''success''') {
         setProducts(result.data);
       } else {
-        throw new Error(result.message || 'データの取得に失敗しました。');
+        throw new Error(result.message || '''データの取得に失敗しました。''');
       }
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching products:', err);
+      console.error('''Error fetching products:''', err);
     } finally {
       setLoading(false);
     }
@@ -263,43 +279,43 @@ function ProductList() {
 
   const handleAddProduct = async (productData) => {
     try {
-      const result = await sendPostRequest('addProduct', {
+      const result = await sendPostRequest('''addProduct''', {
         productCode: productData.code,
         productName: productData.name,
         supplierId: productData.supplierId
       });
 
-      if (result.status === 'success') {
-        alert(result.data?.message || '商品を追加しました。');
+      if (result.status === '''success''') {
+        alert(result.data?.message || '''商品を追加しました。''');
         fetchProducts(); // データを再取得
       } else {
-        throw new Error(result.message || '商品の追加に失敗しました。');
+        throw new Error(result.message || '''商品の追加に失敗しました。''');
       }
     } catch (err) {
       alert(`エラーが発生しました: ${err.message}`);
-      console.error('Error adding product:', err);
+      console.error('''Error adding product:''', err);
     }
   };
 
   const handleDeleteProduct = async (productCode) => {
-    if (!window.confirm('削除してもよろしいですか？')) {
+    if (!window.confirm('''削除してもよろしいですか？''')) {
       return;
     }
     
     try {
-      const result = await sendPostRequest('deleteProduct', {
+      const result = await sendPostRequest('''deleteProduct''', {
         productCode
       });
 
-      if (result.status === 'success') {
-        alert(result.data?.message || '商品を削除しました。');
+      if (result.status === '''success''') {
+        alert(result.data?.message || '''商品を削除しました。''');
         fetchProducts();
       } else {
-        throw new Error(result.message || '商品の削除に失敗しました。');
+        throw new Error(result.message || '''商品の削除に失敗しました。''');
       }
     } catch (err) {
       alert(`エラーが発生しました: ${err.message}`);
-      console.error('Error deleting product:', err);
+      console.error('''Error deleting product:''', err);
     }
   };
 
@@ -330,16 +346,16 @@ GASからのレスポンスは常に以下の形式を期待:
 ```javascript
 // 成功時
 {
-  status: 'success',
-  version: 'shizai-tanaoroshi-gas-ts v1.0',
+  status: '''success''',
+  version: '''shizai-tanaoroshi-gas-ts v1.0''',
   data: { /* 実際のデータ */ }
 }
 
 // エラー時
 {
-  status: 'error',
-  version: 'shizai-tanaoroshi-gas-ts v1.0',
-  message: 'エラーメッセージ'
+  status: '''error''',
+  version: '''shizai-tanaoroshi-gas-ts v1.0''',
+  message: '''エラーメッセージ'''
 }
 ```
 
@@ -385,7 +401,7 @@ GASからのレスポンスは常に以下の形式を期待:
 ```javascript
 // フォールバック値を設定
 const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL || 
-  'https://script.google.com/macros/s/DEFAULT_ID/exec';
+  '''https://script.google.com/macros/s/DEFAULT_ID/exec''';
 ```
 
 #### 問題2: 環境変数を変更したのに反映されない
@@ -412,12 +428,12 @@ Netlify → Deploys → Trigger deploy → Clear cache and deploy site
 
 ```javascript
 // src/config.js に追加
-console.group('🔧 Environment Configuration');
-console.log('Mode:', import.meta.env.MODE);
-console.log('VITE_GAS_API_URL:', import.meta.env.VITE_GAS_API_URL);
-console.log('Using GAS URL:', GAS_WEB_APP_URL);
-console.log('Is Development:', import.meta.env.DEV);
-console.log('Is Production:', import.meta.env.PROD);
+console.group('''🔧 Environment Configuration''');
+console.log('''Mode:''', import.meta.env.MODE);
+console.log('''VITE_GAS_API_URL:''', import.meta.env.VITE_GAS_API_URL);
+console.log('''Using GAS URL:''', GAS_WEB_APP_URL);
+console.log('''Is Development:''', import.meta.env.DEV);
+console.log('''Is Production:''', import.meta.env.PROD);
 console.groupEnd();
 ```
 
@@ -510,9 +526,9 @@ React + Vite + GASの連携コードを生成する際は:
 
 ```typescript
 // ❌ これは動作しません（TypeScriptエラー）
-output.setHeader('Access-Control-Allow-Origin', '*');
+output.setHeader('''Access-Control-Allow-Origin''', '''*''');
 // または
-response.addHeader('Access-Control-Allow-Origin', '*');
+response.addHeader('''Access-Control-Allow-Origin''', '''*''');
 ```
 
 ### ✅ 正しい対応方法（推奨）
@@ -544,7 +560,7 @@ Netlify Functions や Vercel Edge Function などのサーバーレス機能を�
         const response = await fetch(targetUrl, {
           method: httpMethod,
           headers: {
-            'Content-Type': headers['content-type'] || 'application/json',
+            '''Content-Type''': headers['''content-type'''] || '''application/json''',
             // 必要に応じて他のヘッダーも転送
           },
           body: body, // POSTリクエストの場合
@@ -555,10 +571,10 @@ Netlify Functions や Vercel Edge Function などのサーバーレス機能を�
         return {
           statusCode: response.status,
           headers: {
-            'Access-Control-Allow-Origin': '*', // ここでCORSヘッダーを設定
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Content-Type': 'application/json',
+            '''Access-Control-Allow-Origin''': '''*''', // ここでCORSヘッダーを設定
+            '''Access-Control-Allow-Methods''': '''GET, POST, OPTIONS''',
+            '''Access-Control-Allow-Headers''': '''Content-Type''',
+            '''Content-Type''': '''application/json''',
           },
           body: JSON.stringify(data),
         };
@@ -566,8 +582,8 @@ Netlify Functions や Vercel Edge Function などのサーバーレス機能を�
         return {
           statusCode: 500,
           headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
+            '''Access-Control-Allow-Origin''': '''*''',
+            '''Content-Type''': '''application/json''',
           },
           body: JSON.stringify({ error: error.message }),
         };
@@ -594,16 +610,16 @@ Netlify Functions や Vercel Edge Function などのサーバーレス機能を�
 
     ```javascript
     // src/config.js (GAS_WEB_APP_URLは不要になるか、プロキシURLに変わる)
-    export const PROXY_GAS_URL = '/api/gas'; // Netlifyのプロキシエンドポイント
+    export const PROXY_GAS_URL = '''/api/gas'''; // Netlifyのプロキシエンドポイント
 
     // src/api/gas.js (fetchのURLを変更)
     const response = await fetch(PROXY_GAS_URL, {
-      method: 'POST',
+      method: '''POST''',
       headers: {
-        'Content-Type': 'application/json',
+        '''Content-Type''': '''application/json''',
       },
       body: JSON.stringify({ 
-        action: 'addInventoryRecord',
+        action: '''addInventoryRecord''',
         data: inventoryData 
       })
     });
@@ -616,10 +632,10 @@ Netlify Functions や Vercel Edge Function などのサーバーレス機能を�
 *   **❌ 間違った実装**: POSTリクエストで`action`をURLクエリパラメータに含める。
     ```typescript
     // フロントエンド側
-    fetch('https://script.google.com/.../exec?action=addInventoryRecord', {
-      method: 'POST',
+    fetch('''https://script.google.com/.../exec?action=addInventoryRecord''', {
+      method: '''POST''',
       headers: {
-        'Content-Type': 'application/json',
+        '''Content-Type''': '''application/json''',
       },
       body: JSON.stringify({ data: inventoryData })
     })
@@ -627,13 +643,13 @@ Netlify Functions や Vercel Edge Function などのサーバーレス機能を�
 *   **✅ 正しい実装**: POSTリクエストでは`action`を**リクエストボディに含める**のが正しい方法です。
     ```typescript
     // フロントエンド側
-    fetch('https://script.google.com/.../exec', {
-      method: 'POST',
+    fetch('''https://script.google.com/.../exec''', {
+      method: '''POST''',
       headers: {
-        'Content-Type': 'application/json',
+        '''Content-Type''': '''application/json''',
       },
       body: JSON.stringify({ 
-        action: 'addInventoryRecord',
+        action: '''addInventoryRecord''',
         data: inventoryData 
       })
     })
@@ -660,12 +676,12 @@ const response = await fetch(
 ```typescript
 // actionはリクエストボディ
 const response = await fetch(GAS_URL, {
-  method: 'POST',
+  method: '''POST''',
   headers: {
-    'Content-Type': 'application/json',
+    '''Content-Type''': '''application/json''',
   },
   body: JSON.stringify({
-    action: 'addInventoryRecord',
+    action: '''addInventoryRecord''',
     year: 2025,
     month: 10,
     records: [...]

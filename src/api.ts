@@ -103,6 +103,7 @@ function getMasterData() {
       currentStorageArea = {
         id: locationId, // 保管場所のIDとして最初のロケーションIDを使用
         name: storageAreaName,
+        products: [], // products プロパティを追加
         details: [],
         detailMap: {}, // 重複チェック用
         inventoryStatus: 'unrecorded', // デフォルト
@@ -173,6 +174,14 @@ function getMasterData() {
       .filter(Boolean); // nullを除外
 
     currentDetail.products.push(...productsInLocation);
+
+    // もし詳細名がなく、保管場所自身が商品を持つ場合
+    if (!detailName && productsInLocation.length > 0) {
+      if (!currentStorageArea.products) {
+        currentStorageArea.products = [];
+      }
+      currentStorageArea.products.push(...productsInLocation);
+    }
 
     // 棚卸状況の更新
     if (productsInLocation.length > 0 && productsInLocation.every(p => p.inventoryQuantity > 0)) {
