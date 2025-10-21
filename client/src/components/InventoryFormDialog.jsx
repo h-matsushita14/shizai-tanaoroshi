@@ -32,7 +32,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
     // quantitiesの初期化
     const initialQuantities = {};
     (initialProducts || []).forEach(product => {
-      initialQuantities[product["商品コード"]] = { lot: '', loose: '' }; // 初期値は空
+      initialQuantities[product.productCode] = { lot: '', loose: '' }; // 初期値は空
     });
     setQuantities(initialQuantities);
 
@@ -51,7 +51,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
   const handleSave = async () => {
     const inventoryData = [];
     products.forEach(product => {
-      const productCode = product["商品コード"];
+      const productCode = product.productCode;
       const lotQuantity = quantities[productCode]?.lot;
       const looseQuantity = quantities[productCode]?.loose;
 
@@ -184,11 +184,11 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
 
                       return (
                         <>
-                          {lotUnit && (
+                          {lotUnit && lotUnit !== looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["productCode"]]?.lot || ''}
+                                value={quantities[product.productCode]?.lot || ''}
                                 onChange={(e) => handleQuantityChange(product["productCode"], 'lot', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
@@ -201,7 +201,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["productCode"]]?.loose || ''}
+                                value={quantities[product.productCode]?.loose || ''}
                                 onChange={(e) => handleQuantityChange(product["productCode"], 'loose', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
@@ -241,11 +241,11 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                         <TableCell>{product["productName"]}</TableCell>
                         <TableCell>{product["internalName"]}</TableCell> {/* 変更 */}
                         <TableCell sx={{ width: '100px' }}> {/* ロット数量入力欄 */}
-                          {lotUnit && (
+                          {lotUnit && lotUnit !== looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["productCode"]]?.lot || ''}
+                                value={quantities[product.productCode]?.lot || ''}
                                 onChange={(e) => handleQuantityChange(product["productCode"], 'lot', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
@@ -260,7 +260,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                               <TextField
                                 type="number"
-                                value={quantities[product["productCode"]]?.loose || ''}
+                                value={quantities[product.productCode]?.loose || ''}
                                 onChange={(e) => handleQuantityChange(product["productCode"], 'loose', e.target.value)}
                                 inputProps={{ min: 0 }}
                                 size="small"
