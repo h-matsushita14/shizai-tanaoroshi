@@ -363,6 +363,9 @@ function doPost(e) {
             case 'addInventoryRecord':
                 payload = addInventoryRecords(requestBody);
                 break;
+            case 'runCostCalculation':
+                payload = updateCostCalculationSheet();
+                break;
             default:
                 throw new Error("無効なリクエストです。'action'パラメータが正しく指定されているか確認してください。(例: ?action=addProduct)");
         }

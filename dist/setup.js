@@ -43,8 +43,9 @@ function setupInventoryAppSheets() {
         {
             name: "Cost_Calculation",
             headers: [
-                "記録日時", "商品ID", "合計数量", "単価", "合計金額",
-                "ロケーションID", "担当者"
+                "記録日時", "商品コード", "商品名", "ロット数量", "ロット単位",
+                "入数", "入数単位", "バラ数量", "バラ単位", "合計数量", "単位",
+                "単価", "合計金額", "仕入先名"
             ],
             formulaSheet: true,
             description: "記録データから金額を自動算出"
@@ -87,38 +88,10 @@ function setupInventoryAppSheets() {
     }
 }
 /**
- * 金額算出シートに、棚卸記録（記録時単価）を参照するARRAYFORMULAを設定する
+ * 金額算出シートに、棚卸記録とマスターデータを参照するARRAYFORMULAを設定する
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Cost_Calculationシートオブジェクト
  */
 function setCalculationFormulas(sheet) {
-    // Inventory_Recordsの列構成: A: 記録日時, B: 商品コード, C: ロケーションID, D: ロット数量, E: ロット単位, F: バラ数量, G: バラ単位, H: 記録時単価, I: 担当者, J: 備考
-    // Product_Masterの列構成: A: 商品コード, ..., H: ケース入数
-    // A: 記録日時 (A2:A) - Inventory_RecordsのA列
-    const timestampFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!A2:A),, Inventory_Records!A2:A))';
-    sheet.getRange("A2").setFormula(timestampFormula);
-    // B: 商品ID (B2:B) - Inventory_RecordsのB列 (商品コード)
-    const productIdFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!B2:B),, Inventory_Records!B2:B))';
-    sheet.getRange("B2").setFormula(productIdFormula);
-    // C: 合計数量 (C2:C) - (ロット数量 * ケース入数) + バラ数量
-    // Inventory_Records!D2:D (ロット数量), Inventory_Records!F2:F (バラ数量)
-    // Product_Masterからケース入数をVLOOKUP (Product_Master!A:H の8列目)
-    const totalQuantityFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!B2:B),, ' +
-        '(N(Inventory_Records!D2:D) * IFERROR(VLOOKUP(Inventory_Records!B2:B, Product_Master!A:H, 8, FALSE), 0)) + ' +
-        'N(Inventory_Records!F2:F)' +
-        '))';
-    sheet.getRange("C2").setFormula(totalQuantityFormula);
-    // D: 単価 (D2:D) - Inventory_RecordsのH列 (記録時単価)
-    const unitCostFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!H2:H),, Inventory_Records!H2:H))';
-    sheet.getRange("D2").setFormula(unitCostFormula);
-    // E: 合計金額 (E2:E) - 合計数量 * 単価
-    const totalValueFormula = '=ARRAYFORMULA(IF(ISBLANK(C2:C),, C2:C * D2:D))';
-    sheet.getRange("E2").setFormula(totalValueFormula);
-    // F: ロケーションID (F2:F) - Inventory_RecordsのC列
-    const locationIdFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!C2:C),, Inventory_Records!C2:C))';
-    sheet.getRange("F2").setFormula(locationIdFormula);
-    // G: 担当者 (G2:G) - Inventory_RecordsのI列
-    const countedByFormula = '=ARRAYFORMULA(IF(ISBLANK(Inventory_Records!I2:I),, Inventory_Records!I2:I))';
-    sheet.getRange("G2").setFormula(countedByFormula);
-    // 金額列のフォーマットを調整
-    sheet.getRange("D:E").setNumberFormat("¥#,##0");
+    // この関数は手動集計方式への移行に伴い、処理を空にします。
+    // ARRAYFORMULAは設定されません。
 }

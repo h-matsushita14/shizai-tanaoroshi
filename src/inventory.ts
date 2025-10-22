@@ -1,5 +1,6 @@
 /**
- * 指定された年月の末日を起点として、各商品ごとに最も近い棚卸記録を抽出するヘルパー関数
+ * 指定された年月の末日を基準に、各商品ごとに最適な棚卸記録を抽出するヘルパー関数
+ * 新ルール：基本は「基準日以前で最新」の記録。ただし「基準日から10日以内の未来」に記録があればそちらを優先する。
  * @param {Array<Array<any>>} allRecords - Inventory_Recordsシートの全データ（ヘッダー含む）
  * @param {number} targetYear - 対象年
  * @param {number} targetMonth - 対象月 (1-12)
@@ -20,10 +21,13 @@ function filterInventoryRecordsByClosestDate(allRecords, targetYear, targetMonth
     throw new Error("Inventory_Recordsシートに'記録日時'または'商品コード'カラムが見つかりません。");
   }
 
-  // 対象月の末日を計算
-  // targetMonth は 1-12 なので、Dateコンストラクタの月は -1 する
-  const targetDate = new Date(targetYear, targetMonth - 1, new Date(targetYear, targetMonth, 0).getDate());
+  // 基準日（対象月の末日）を設定
+  const targetDate = new Date(targetYear, targetMonth, 0);
   targetDate.setHours(23, 59, 59, 999); // 末日の終わり
+
+  // 未来を許容する猶予期間（10日間）を設定
+  const gracePeriodEndDate = new Date(targetDate);
+  gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 10);
 
   const recordsByProduct = {}; // 商品コードごとに記録をグループ化
 
@@ -40,31 +44,30 @@ function filterInventoryRecordsByClosestDate(allRecords, targetYear, targetMonth
   for (const productCode in recordsByProduct) {
     const productRecords = recordsByProduct[productCode];
 
-    let bestRecord = null;
-    let closestAfterTarget = null; // 末日以降で最も古い記録
-    let closestBeforeTarget = null; // 末日以前で最も新しい記録
+    let closestBeforeTarget = null; // 基準日以前で最も新しい記録
+    let closestInGracePeriod = null; // 猶予期間内で最も古い記録
 
     productRecords.forEach(record => {
       const recordTimestamp = new Date(record[timestampColumnIndex]);
-      if (recordTimestamp > targetDate) {
-        if (closestAfterTarget === null || recordTimestamp < new Date(closestAfterTarget[timestampColumnIndex])) {
-          closestAfterTarget = record;
+
+      if (recordTimestamp > targetDate && recordTimestamp <= gracePeriodEndDate) {
+        // 猶予期間内の記録
+        if (closestInGracePeriod === null || recordTimestamp < new Date(closestInGracePeriod[timestampColumnIndex])) {
+          closestInGracePeriod = record;
         }
-      } else {
+      } else if (recordTimestamp <= targetDate) {
+        // 基準日以前の記録
         if (closestBeforeTarget === null || recordTimestamp > new Date(closestBeforeTarget[timestampColumnIndex])) {
           closestBeforeTarget = record;
         }
       }
     });
 
-    if (closestAfterTarget !== null) {
-      bestRecord = closestAfterTarget;
+    // 優先順位： 1. 猶予期間内の記録, 2. 基準日以前の最新記録
+    if (closestInGracePeriod !== null) {
+      resultRecords.push(closestInGracePeriod);
     } else if (closestBeforeTarget !== null) {
-      bestRecord = closestBeforeTarget;
-    }
-
-    if (bestRecord) {
-      resultRecords.push(bestRecord);
+      resultRecords.push(closestBeforeTarget);
     }
   }
 
@@ -79,8 +82,8 @@ function filterInventoryRecordsByClosestDate(allRecords, targetYear, targetMonth
  */
 function getInventoryRecords(year, month) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName("Inventory_Records");
-  if (!sheet) throw new Error("Inventory_Recordsシートが見つかりません。");
+  const sheet = ss.getSheetByName("Cost_Calculation");
+  if (!sheet) throw new Error("Cost_Calculationシートが見つかりません。");
 
   const allRecords = sheet.getDataRange().getValues();
   return filterInventoryRecordsByClosestDate(allRecords, year, month);
@@ -94,8 +97,8 @@ function getInventoryRecords(year, month) {
  */
 function getInventoryRecordsJson(year, month) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName("Inventory_Records");
-  if (!sheet) throw new Error("Inventory_Recordsシートが見つかりません。");
+  const sheet = ss.getSheetByName("Cost_Calculation");
+  if (!sheet) throw new Error("Cost_Calculationシートが見つかりません。");
 
   const allRecords = sheet.getDataRange().getValues();
   const filteredRecords = filterInventoryRecordsByClosestDate(allRecords, year, month);
@@ -281,4 +284,124 @@ function addInventoryRecords(requestBody) {
   }
 
   return { message: `${newRows.length}件の棚卸記録が正常に追加されました。`, count: newRows.length };
+}
+
+/**
+ * Cost_Calculationシートの内容を、Inventory_Recordsから集計して更新する
+ */
+function updateCostCalculationSheet() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  
+  // 1. 必要なシートを取得
+  const inventorySheet = ss.getSheetByName("Inventory_Records");
+  const costSheet = ss.getSheetByName("Cost_Calculation");
+  const productSheet = ss.getSheetByName("Product_Master");
+  const supplierSheet = ss.getSheetByName("Supplier_Master");
+
+  if (!inventorySheet || !costSheet || !productSheet || !supplierSheet) {
+    throw new Error("必要なシート(Inventory_Records, Cost_Calculation, Product_Master, Supplier_Master)のいずれかが見つかりません。");
+  }
+
+  // 2. マスターデータをMapに変換して高速化
+  const productData = productSheet.getDataRange().getValues();
+  const productHeaders = productData.shift() || [];
+  const productMap = new Map(productData.map(row => [row[0], row])); // 商品コードをキーに
+
+  const supplierData = supplierSheet.getDataRange().getValues();
+  const supplierHeaders = supplierData.shift() || [];
+  const supplierMap = new Map(supplierData.map(row => [row[0], row])); // 仕入先IDをキーに
+
+  // マスターデータのヘッダーインデックスを取得
+  const prodNameIdx = productHeaders.indexOf("商品名");
+  const supplierIdIdx = productHeaders.indexOf("仕入先ID");
+  const caseCountIdx = productHeaders.indexOf("ケース入数");
+  const lotUnitIdx = productHeaders.indexOf("ロット単位");
+  const pieceUnitIdx = productHeaders.indexOf("バラ単位");
+  const supNameIdx = supplierHeaders.indexOf("仕入先名");
+
+  // 3. 棚卸記録を集約
+  const inventoryData = inventorySheet.getDataRange().getValues();
+  const inventoryHeaders = inventoryData.shift() || [];
+  const invTimestampIdx = inventoryHeaders.indexOf("記録日時");
+  const invProductCodeIdx = inventoryHeaders.indexOf("商品コード");
+  const invLotQtyIdx = inventoryHeaders.indexOf("ロット数量");
+  const invPieceQtyIdx = inventoryHeaders.indexOf("バラ数量");
+  const invUnitPriceIdx = inventoryHeaders.indexOf("記録時単価");
+
+  const aggregatedData = new Map();
+
+  inventoryData.forEach(row => {
+    const timestamp = row[invTimestampIdx];
+    const productCode = row[invProductCodeIdx];
+    const lotQty = row[invLotQtyIdx] || 0;
+    const pieceQty = row[invPieceQtyIdx] || 0;
+    const unitPrice = row[invUnitPriceIdx] || 0;
+
+    if (!productCode) return;
+
+    if (aggregatedData.has(productCode)) {
+      const current = aggregatedData.get(productCode);
+      current.lotQty += lotQty;
+      current.pieceQty += pieceQty;
+      if (new Date(timestamp) > new Date(current.timestamp)) {
+        current.timestamp = timestamp;
+        current.unitPrice = unitPrice; // 最新の記録時の単価を採用
+      }
+    } else {
+      aggregatedData.set(productCode, {
+        timestamp: timestamp,
+        lotQty: lotQty,
+        pieceQty: pieceQty,
+        unitPrice: unitPrice,
+      });
+    }
+  });
+
+  // 4. Cost_Calculationシート用の出力データを作成
+  const outputRows = [];
+  const costHeaders = costSheet.getRange(1, 1, 1, costSheet.getLastColumn()).getValues()[0];
+
+  for (const [productCode, data] of aggregatedData.entries()) {
+    const productInfo = productMap.get(productCode);
+    if (!productInfo) continue;
+
+    const caseCount = productInfo[caseCountIdx] || 0;
+    const totalQty = (data.lotQty * caseCount) + data.pieceQty;
+    const totalValue = totalQty * data.unitPrice;
+    
+    const supplierId = productInfo[supplierIdIdx];
+    const supplierInfo = supplierMap.get(supplierId);
+    const supplierName = supplierInfo ? supplierInfo[supNameIdx] : "";
+
+    const newRow = costHeaders.map(header => {
+        switch(header) {
+            case "記録日時": return data.timestamp;
+            case "商品コード": return productCode;
+            case "商品名": return productInfo[prodNameIdx];
+            case "ロット数量": return data.lotQty;
+            case "ロット単位": return productInfo[lotUnitIdx];
+            case "入数": return caseCount;
+            case "入数単位": return productInfo[lotUnitIdx]; // 仮: ロット単位と同じ
+            case "バラ数量": return data.pieceQty;
+            case "バラ単位": return productInfo[pieceUnitIdx];
+            case "合計数量": return totalQty;
+            case "単位": return productInfo[pieceUnitIdx]; // 仮: バラ単位と同じ
+            case "単価": return data.unitPrice;
+            case "合計金額": return totalValue;
+            case "仕入先名": return supplierName;
+            default: return "";
+        }
+    });
+    outputRows.push(newRow);
+  }
+
+  // 5. シートに書き込み
+  if (costSheet.getLastRow() > 1) {
+    costSheet.getRange(2, 1, costSheet.getLastRow() - 1, costSheet.getLastColumn()).clearContent();
+  }
+  if (outputRows.length > 0) {
+    costSheet.getRange(2, 1, outputRows.length, outputRows[0].length).setValues(outputRows);
+  }
+  
+  return { message: `${outputRows.length}件の商品が集計されました。`, count: outputRows.length };
 }

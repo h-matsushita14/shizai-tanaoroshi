@@ -20,8 +20,15 @@ const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
 function LocationPage() {
-  const { masterData, isLoadingMasterData, masterDataError, setMasterData, setIsLoadingMasterData, setMasterDataError } = useMasterData();
-  const locations = masterData?.locations || [];
+  const { masterData, isLoadingMasterData, masterDataError } = useMasterData();
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    if (masterData?.locations) {
+      setLocations(masterData.locations);
+    }
+  }, [masterData]);
+
 
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
@@ -178,6 +185,44 @@ function LocationPage() {
       [areaId]: isExpanded,
     }));
   };
+
+  const handleSaveSuccess = (savedRecords) => {
+    if (!savedRecords || savedRecords.length === 0) return;
+
+    const updatedLocations = JSON.parse(JSON.stringify(locations)); // Deep copy
+    const today = new Date().toISOString();
+
+    savedRecords.forEach(record => {
+      const locationId = record.ロケーションID;
+      const productCode = record.商品コード;
+
+      for (const categoryGroup of updatedLocations) {
+        for (const storageArea of categoryGroup.storageAreas) {
+          let targetLocation = null;
+          if (storageArea.id === locationId) {
+            targetLocation = storageArea;
+          } else {
+            targetLocation = storageArea.details.find(d => d.id === locationId);
+          }
+
+          if (targetLocation) {
+            targetLocation.inventoryStatus = 'recorded';
+            const product = targetLocation.products.find(p => p.商品コード === productCode);
+            if (product) {
+              product.記録日時 = today;
+            }
+            // 親のステータスも更新
+            if (storageArea.details.some(d => d.id === locationId)) {
+               storageArea.inventoryStatus = 'recorded';
+            }
+            break; // このrecordに対する処理は終わったので次のrecordへ
+          }
+        }
+      }
+    });
+    setLocations(updatedLocations);
+  };
+
 
   const currentDrawerWidth = isMobile ? mobileDrawerWidth : drawerWidth;
 
@@ -468,6 +513,7 @@ function LocationPage() {
           locationName={selectedLocationForForm.name}
           locationDetail={selectedLocationForForm.detail}
           initialProducts={selectedLocationForForm.products} // 製品情報を追加
+          onSaveSuccess={handleSaveSuccess}
         />
       )}
     </Box>
