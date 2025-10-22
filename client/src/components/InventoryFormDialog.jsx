@@ -51,14 +51,14 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
   const handleSave = async () => {
     const inventoryData = [];
     products.forEach(product => {
-      const productCode = product.商品コード; // 修正: product.productCode -> product.商品コード
-      const lotQuantity = quantities[productCode]?.lot;
-      const looseQuantity = quantities[productCode]?.loose;
+      const productCode = product.productCode; // 修正
+      const lotQuantity = quantities[product.productCode]?.lot;
+      const looseQuantity = quantities[product.productCode]?.loose;
 
       // ロット数量またはバラ数量のいずれかが入力されている場合のみ記録対象とする
       if (lotQuantity !== '' || looseQuantity !== '') {
         inventoryData.push({
-          商品コード: productCode,
+          商品コード: productCode, // 修正
           ロケーションID: locationId,
           ロット数量: lotQuantity !== '' ? parseInt(lotQuantity, 10) : 0,
           ロット単位: product.lotUnit || '',
