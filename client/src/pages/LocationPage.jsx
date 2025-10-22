@@ -293,9 +293,8 @@ function LocationPage() {
                           >
                             <ListItemText 
                               primary={area.name} 
-                              secondary={area.inventoryStatus === 'recorded' ? '入力済み' : ''}
+                              secondary={''}
                             />
-                            {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" sx={{ ml: 1 }} />}
                           </ListItemButton>
                         ))}
                       </AccordionDetails>
@@ -489,7 +488,6 @@ function LocationPage() {
                           <MenuItem key={area.id} value={area.name}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                               <Typography>{area.name}</Typography>
-                              {area.inventoryStatus === 'recorded' && <CheckCircleIcon color="success" fontSize="small" />}
                             </Box>
                           </MenuItem>
                         ))}
