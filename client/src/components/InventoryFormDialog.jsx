@@ -187,6 +187,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                       return (
                         <>
                           {lotUnit && lotUnit !== looseUnit && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <TextField
                                 type="number"
                                 value={quantities[product.productCode]?.lot || ''} // 修正
@@ -199,6 +200,9 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                             </Box>
                           )}
                           {looseUnit && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <TextField
+                                type="number"
                                 value={quantities[product.productCode]?.loose || ''} // 修正
                                 onChange={(e) => handleQuantityChange(product.productCode, 'loose', e.target.value)}
                                 inputProps={{ min: 0 }}
