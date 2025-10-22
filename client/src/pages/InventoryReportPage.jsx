@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, CircularProgress, Alert, Select, MenuItem, InputLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { sendPostRequest, sendGetRequest, PROXY_GAS_URL } from '@/api/gas'; // sendPostRequest, sendGetRequest, PROXY_GAS_URL をインポート
+import { sendPostRequest, sendGetRequest } from '@/api/gas';
+import { PROXY_GAS_URL } from '@/config';
 
 function InventoryReportPage() {
   const [outputFormat, setOutputFormat] = useState('csv');
