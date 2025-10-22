@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, CircularProgress, Alert, Select, MenuItem, InputLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { sendPostRequest } from '@/api/gas'; // sendPostRequest をインポート
-
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_WEB_APP_URL;
+import { sendPostRequest, sendGetRequest, PROXY_GAS_URL } from '@/api/gas'; // sendPostRequest, sendGetRequest, PROXY_GAS_URL をインポート
 
 function InventoryReportPage() {
   const [outputFormat, setOutputFormat] = useState('csv');
@@ -30,12 +28,7 @@ function InventoryReportPage() {
     setTableLoading(true);
     setTableError(null);
     try {
-      const requestUrl = `${GAS_WEB_APP_URL}?action=getInventoryRecordsJson&year=${selectedYear}&month=${selectedMonth}`;
-      const response = await fetch(requestUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
+      const result = await sendGetRequest('getInventoryRecordsJson', { year: selectedYear, month: selectedMonth });
       if (result.status === 'success') {
         setInventoryData(result.data);
       } else {
@@ -103,7 +96,7 @@ function InventoryReportPage() {
           throw new Error('無効な出力形式です。');
       }
 
-      const requestUrl = `${GAS_WEB_APP_URL}?action=${action}&year=${selectedYear}&month=${selectedMonth}`;
+      const requestUrl = `${PROXY_GAS_URL}?action=${action}&year=${selectedYear}&month=${selectedMonth}`;
       const response = await fetch(requestUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
