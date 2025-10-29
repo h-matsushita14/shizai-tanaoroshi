@@ -18,6 +18,7 @@ import {
   TextField,
   CircularProgress, // CircularProgress を追加
   TableSortLabel, // TableSortLabel を追加
+  Alert,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,10 +32,21 @@ function SupplierMasterPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null); // 編集中の仕入れ先
   const [newSupplierName, setNewSupplierName] = useState('');
-  const [loading, setLoading] = useState(true); // loading ステートを追加
   const [searchTerm, setSearchTerm] = useState(''); // 仕入先名検索キーワードの状態
   const [orderBy, setOrderBy] = useState('仕入先ID'); // ソート対象の列
   const [order, setOrder] = useState('asc'); // ソート順 (asc/desc)
+
+  const { masterData, isLoadingMasterData, masterDataError, updateSuppliers } = useMasterData();
+
+  useEffect(() => {
+    if (masterData && masterData.suppliers) {
+      const suppliersWithId = masterData.suppliers.map((supplier, index) => ({
+        id: supplier["仕入先ID"] || index,
+        ...supplier,
+      }));
+      setSuppliers(suppliersWithId);
+    }
+  }, [masterData]);
 
   // 仕入れ先名を正規化するヘルパー関数
   const normalizeSupplierName = (name) => {
@@ -50,40 +62,6 @@ function SupplierMasterPage() {
                          .replace(/\s+/g, ''); // 全角・半角スペースを削除
     return normalized.trim();
   };
-
-  // .envからGASウェブアプリのURLを取得
-  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
-
-  const { updateSuppliers } = useMasterData(); // updateSuppliers を取得
-
-  // 仕入れ先データをGASから取得する関数
-  const fetchSuppliers = async () => {
-    setLoading(true); // データ取得開始時にローディングをtrueに
-    try {
-      const data = await sendGetRequest('getSuppliers');
-      if (data.status === 'success') {
-        // 各仕入先に一意のIDを付与（DataGridの要件に合わせる）
-        const suppliersWithId = data.data.map((supplier, index) => ({
-          id: supplier["仕入先ID"] || index, // 仕入先IDをidとして使用、なければindex
-          ...supplier,
-        }));
-        setSuppliers(suppliersWithId);
-        updateSuppliers(data.data); // MasterDataContext を更新
-      } else {
-        console.error('Failed to fetch suppliers:', data.message);
-        alert('仕入れ先データの取得に失敗しました: ' + data.message);
-      }
-    } catch (error) {
-      console.error('Error fetching suppliers:', error);
-      alert('仕入れ先データの取得中にエラーが発生しました。');
-    } finally {
-      setLoading(false); // データ取得完了時にローディングをfalseに
-    }
-  };
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, []); // 初回レンダリング時にのみ実行
 
   // フィルターされた仕入れ先リスト
   const filteredSuppliers = suppliers.filter(supplier =>
@@ -120,7 +98,7 @@ function SupplierMasterPage() {
 
   const handleEditClick = (supplier) => {
     setEditingSupplier(supplier);
-    setNewSupplierName(supplier["仕入先名"]);
+    setNewSupplierName(supplier["仕入先名']);
     setOpenDialog(true);
   };
 
@@ -130,14 +108,16 @@ function SupplierMasterPage() {
         const data = await sendPostRequest('deleteSupplier', { supplierId });
         if (data.status === 'success') {
           alert(data.message);
-          fetchSuppliers(); // データを再取得してUIを更新
+          // MasterDataContext を更新
+          const updatedSuppliers = suppliers.filter(s => s["仕入先ID"] !== supplierId);
+          updateSuppliers(updatedSuppliers);
         } else {
           console.error('Failed to delete supplier:', data.message);
           alert('仕入れ先の削除に失敗しました: ' + data.message);
         }
       } catch (error) {
         console.error('Error deleting supplier:', error);
-        alert('仕入れ先の削除中にエラーが発生しました。');
+        alert('仕入れ先の削除中にエラーが発生しました。' + error.message);
       }
     }
   };
@@ -186,7 +166,7 @@ function SupplierMasterPage() {
           }
         }
   
-        const supplierData = { "仕入れ先名": newSupplierName };
+        const supplierData = { "仕入先名": newSupplierName };
     try {
       if (editingSupplier) {
         // 更新
@@ -194,7 +174,11 @@ function SupplierMasterPage() {
         const data = await sendPostRequest('editSupplier', updatedData);
         if (data.status === 'success') {
           alert(data.message);
-          fetchSuppliers(); // データを再取得してUIを更新
+          // MasterDataContext を更新
+          const updatedSuppliers = suppliers.map(s =>
+            s["仕入先ID"] === updatedData["仕入先ID"] ? updatedData : s
+          );
+          updateSuppliers(updatedSuppliers);
         } else {
           console.error('Failed to update supplier:', data.message);
           alert('仕入れ先の更新に失敗しました: ' + data.message);
@@ -204,7 +188,10 @@ function SupplierMasterPage() {
         const data = await sendPostRequest('addSupplier', supplierData);
         if (data.status === 'success') {
           alert(data.message);
-          fetchSuppliers(); // データを再取得してUIを更新
+          // MasterDataContext を更新
+          // 新規追加の場合、GASから返されるデータには新しい仕入先IDが含まれているはずなので、それを利用
+          const newSupplier = { ...supplierData, "仕入先ID": data.data["仕入先ID"] }; // GASのレスポンスからIDを取得
+          updateSuppliers([...suppliers, newSupplier]);
         } else {
           console.error('Failed to add supplier:', data.message);
           alert('仕入れ先の追加に失敗しました: ' + data.message);
@@ -212,10 +199,30 @@ function SupplierMasterPage() {
       }
     } catch (error) {
       console.error('Error saving supplier:', error);
-      alert('仕入れ先の保存中にエラーが発生しました。');
+      alert('仕入れ先の保存中にエラーが発生しました。' + error.message);
     }
     handleDialogClose();
   };
+
+  if (isLoadingMasterData) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>仕入先データを読み込み中...</Typography>
+      </Box>
+    );
+  }
+
+  if (masterDataError) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{masterDataError}</Alert>
+        <Button variant="contained" onClick={() => window.location.reload()} sx={{ mt: 2 }}>
+          再試行
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -237,52 +244,46 @@ function SupplierMasterPage() {
         </Button>
       </Box>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sortDirection={orderBy === '仕入先ID' ? order : false}>
-                  <TableSortLabel
-                    active={orderBy === '仕入先ID'}
-                    direction={orderBy === '仕入先ID' ? order : 'asc'}
-                    onClick={() => handleRequestSort('仕入先ID')}
-                  >
-                    仕入先ID
-                  </TableSortLabel>
+      <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell sortDirection={orderBy === '仕入先ID' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === '仕入先ID'}
+                  direction={orderBy === '仕入先ID' ? order : 'asc'}
+                  onClick={() => handleRequestSort('仕入先ID')}
+                >
+                  仕入先ID
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === '仕入先名' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === '仕入先名'}
+                  direction={orderBy === '仕入先名' ? order : 'asc'}
+                  onClick={() => handleRequestSort('仕入先名')}
+                >
+                  仕入れ先名
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">操作</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sortedSuppliers.map((supplier) => (
+              <TableRow key={supplier["仕入先ID"]}>
+                <TableCell>{supplier["仕入先ID"]}</TableCell>
+                <TableCell>{supplier["仕入先名"]}</TableCell>
+                <TableCell align="right">
+                  <IconButton color="primary" onClick={() => handleEditClick(supplier)}>
+                    <EditIcon />
+                  </IconButton>
                 </TableCell>
-                <TableCell sortDirection={orderBy === '仕入先名' ? order : false}>
-                  <TableSortLabel
-                    active={orderBy === '仕入先名'}
-                    direction={orderBy === '仕入先名' ? order : 'asc'}
-                    onClick={() => handleRequestSort('仕入先名')}
-                  >
-                    仕入れ先名
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell align="right">操作</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedSuppliers.map((supplier) => (
-                <TableRow key={supplier["仕入先ID"]}>
-                  <TableCell>{supplier["仕入先ID"]}</TableCell>
-                  <TableCell>{supplier["仕入先名"]}</TableCell>
-                  <TableCell align="right">
-                    <IconButton color="primary" onClick={() => handleEditClick(supplier)}>
-                      <EditIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog open={openDialog} onClose={handleDialogClose}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>

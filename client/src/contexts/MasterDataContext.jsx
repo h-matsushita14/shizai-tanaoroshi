@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { sendGetRequest } from '../api/gas'; // sendGetRequest をインポート
 
 const MasterDataContext = createContext(null);
 
@@ -6,6 +7,27 @@ export const MasterDataProvider = ({ children }) => {
   const [masterData, setMasterData] = useState(null);
   const [isLoadingMasterData, setIsLoadingMasterData] = useState(true);
   const [masterDataError, setMasterDataError] = useState(null);
+
+  // アプリケーション起動時にマスターデータをフェッチ
+  useEffect(() => {
+    const fetchInitialMasterData = async () => {
+      try {
+        const result = await sendGetRequest('getMasterData');
+        if (result.status === 'success') {
+          setMasterData(result.data);
+        } else {
+          throw new Error(result.message || 'マスターデータの取得に失敗しました。');
+        }
+      } catch (err) {
+        console.error('Failed to fetch initial master data:', err);
+        setMasterDataError(err.message);
+      } finally {
+        setIsLoadingMasterData(false);
+      }
+    };
+
+    fetchInitialMasterData();
+  }, []); // コンポーネントのマウント時に一度だけ実行
 
   const updateProducts = useCallback((newProducts) => {
     setMasterData(prevData => ({ ...prevData, products: newProducts }));

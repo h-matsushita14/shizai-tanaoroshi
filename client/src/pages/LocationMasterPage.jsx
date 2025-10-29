@@ -37,7 +37,6 @@ const LocationCard = ({ location, handleEditClick, handleProductRegistrationClic
 
 function LocationMasterPage() {
   const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
@@ -52,52 +51,31 @@ function LocationMasterPage() {
 
   const [uniqueLocations, setUniqueLocations] = useState([]);
   const [uniqueStorageAreas, setUniqueStorageAreas] = useState([]);
-  // const [uniqueDetail1s, setUniqueDetail1s] = useState([]); // 詳細①はリスト不要のため削除
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // .envからGASウェブアプリのURLを取得
-  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
-
-  const { updateLocationsMaster } = useMasterData(); // updateLocationsMaster を取得
+  const { masterData, isLoadingMasterData, masterDataError, updateLocationsMaster } = useMasterData();
 
   useEffect(() => {
-    fetchLocations();
-  }, []);
+    if (masterData && masterData.locationsMaster) {
+      const locationsWithId = masterData.locationsMaster.map((loc, index) => ({
+        id: loc["ロケーションID"] || index,
+        ...loc,
+      }));
+      setLocations(locationsWithId);
 
-  const fetchLocations = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await sendGetRequest('getLocationsMaster'); // 新しいGASアクションを想定
-      if (result.status === 'success') {
-        const locationsWithId = result.data.map((loc, index) => ({
-          id: loc["ロケーションID"] || index,
-          ...loc,
-        }));
-        setLocations(locationsWithId);
-        updateLocationsMaster(result.data); // MasterDataContext を更新
+      // ユニークなリストを作成
+      const uniqueLocs = [...new Set(masterData.locationsMaster.map(loc => loc['ロケーション']).filter(Boolean))];
+      const uniqueAreas = [...new Set(masterData.locationsMaster.map(loc => loc['保管場所']).filter(Boolean))];
 
-        // ユニークなリストを作成
-        const uniqueLocs = [...new Set(result.data.map(loc => loc['ロケーション']).filter(Boolean))];
-        const uniqueAreas = [...new Set(result.data.map(loc => loc['保管場所']).filter(Boolean))];
-        // const uniqueDetails = [...new Set(result.data.map(loc => loc['詳細①']).filter(Boolean))]; // 詳細①はリスト不要のため削除
-
-        setUniqueLocations(uniqueLocs);
-        setUniqueStorageAreas(uniqueAreas);
-        // setUniqueDetail1s(uniqueDetails); // 詳細①はリスト不要のため削除
-
-      } else {
-        throw new Error(result.message || 'ロケーションデータの取得に失敗しました。');
-      }
-    } catch (err) {
-      setError(err.message);
-      console.error('Failed to fetch locations:', err);
-    } finally {
-      setLoading(false);
+      setUniqueLocations(uniqueLocs);
+      setUniqueStorageAreas(uniqueAreas);
     }
-  };
+    if (masterDataError) {
+      setError(masterDataError);
+    }
+  }, [masterData, masterDataError]);
 
   const filteredLocations = locations.filter(loc =>
     (locationFilter ? loc["ロケーション"] === locationFilter : true) &&
@@ -157,14 +135,20 @@ function LocationMasterPage() {
   };
 
   const handleSaveLocation = async () => {
-    setLoading(true);
     setError(null);
     try {
       const action = editingLocation ? 'editLocation' : 'addLocation';
       const result = await sendPostRequest(action, formData);
       if (result.status === 'success') {
         alert(result.message);
-        fetchLocations();
+        // MasterDataContext を更新
+        // GASから最新のマスターデータを再取得してコンテキストを更新する
+        const updatedMasterDataResult = await sendGetRequest('getMasterData');
+        if (updatedMasterDataResult.status === 'success') {
+          updateLocationsMaster(updatedMasterDataResult.data.locationsMaster);
+        } else {
+          throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
+        }
         handleDialogClose();
       } else {
         throw new Error(result.message || 'ロケーションの保存に失敗しました。');
@@ -172,8 +156,6 @@ function LocationMasterPage() {
     } catch (err) {
       setError(err.message);
       console.error('Failed to save location:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -183,13 +165,18 @@ function LocationMasterPage() {
       return;
     }
     if (window.confirm(`ロケーションID: ${editingLocation["ロケーションID"]} のロケーションを削除してもよろしいですか？`)) {
-      setLoading(true);
       setError(null);
       try {
         const result = await sendPostRequest('deleteLocation', { locationId: editingLocation["ロケーションID"] });
         if (result.status === 'success') {
           alert(result.message);
-          fetchLocations();
+          // MasterDataContext を更新
+          const updatedMasterDataResult = await sendGetRequest('getMasterData');
+          if (updatedMasterDataResult.status === 'success') {
+            updateLocationsMaster(updatedMasterDataResult.data.locationsMaster);
+          } else {
+            throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
+          }
           handleDialogClose();
         } else {
           throw new Error(result.message || 'ロケーションの削除に失敗しました。');
@@ -197,8 +184,6 @@ function LocationMasterPage() {
       } catch (err) {
         setError(err.message);
         console.error('Failed to delete location:', err);
-      } finally {
-        setLoading(false);
       }
     }
   };
@@ -253,6 +238,26 @@ function LocationMasterPage() {
   const locationOptions = [...new Set(locations.map(loc => loc['ロケーション']))];
   const storageAreaOptions = [...new Set(locations.map(loc => loc['保管場所']))];
   const detailOptions = [...new Set(locations.map(loc => loc['詳細①']))];
+
+  if (isLoadingMasterData) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>ロケーションデータを読み込み中...</Typography>
+      </Box>
+    );
+  }
+
+  if (masterDataError) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{masterDataError}</Alert>
+        <Button variant="contained" onClick={() => window.location.reload()} sx={{ mt: 2 }}>
+          再試行
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3, overflowX: 'hidden' }}>
@@ -313,14 +318,7 @@ function LocationMasterPage() {
         </Button>
       </Box>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
-          <Typography variant="body2" sx={{ mt: 1 }}>ロケーションデータを読み込み中...</Typography>
-        </Box>
-      ) : error ? (
-        <Alert severity="error" sx={{ m: 1 }}>{error}</Alert>
-      ) : isMobile ? (
+      {isMobile ? (
         <Grid container spacing={2}>
           {sortedLocations.map((location) => (
             <Grid item xs={12} sm={12} md={4} key={location.id}>
@@ -466,8 +464,8 @@ function LocationMasterPage() {
                   <Button onClick={handleDialogClose} color="inherit">
                     キャンセル
                   </Button>
-                  <Button onClick={handleSaveLocation} color="primary" variant="contained" disabled={loading}>
-                    {loading ? <CircularProgress size={24} /> : (editingLocation ? '更新' : '追加')}
+                  <Button onClick={handleSaveLocation} color="primary" variant="contained" disabled={isLoadingMasterData}> {/* loading を isLoadingMasterData に変更 */}
+                    {isLoadingMasterData ? <CircularProgress size={24} /> : (editingLocation ? '更新' : '追加')}
                   </Button>
                 </DialogActions>
               </Dialog>
@@ -477,11 +475,10 @@ function LocationMasterPage() {
                 onClose={handleProductRegistrationDialogClose}
                 locationId={selectedLocationForProductRegistration?.['ロケーションID']}
                 locationName={selectedLocationForProductRegistration?.['ロケーション']}
-                onProductListUpdated={() => fetchLocations()} // ダミー関数を渡す
+                onProductListUpdated={() => { /* MasterDataContext が更新されるため、ここでは何もしない */ }} // ダミー関数を渡す
               />
             </Box>
           );
         }
         
         export default LocationMasterPage;
-        

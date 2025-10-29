@@ -38,7 +38,6 @@ const ProductCard = ({ product, handleViewDetails, handleEdit }) => (
 
 function ProductMasterPage() {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -49,65 +48,34 @@ function ProductMasterPage() {
   const [searchTerm, setSearchTerm] = useState(''); // 統合検索キーワードの状態
   const [orderBy, setOrderBy] = useState('商品コード'); // ソート対象の列
   const [order, setOrder] = useState('asc'); // ソート順 (asc/desc)
-  const [suppliers, setSuppliers] = useState([]); // 仕入先リストの状態
   const [lotUnits, setLotUnits] = useState([]);
   const [pieceUnits, setPieceUnits] = useState([]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md')); // md以下の画面サイズでtrue
 
-  // .envからGASウェブアプリのURLを取得
-  const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL;
-
-  const { updateProducts, updateSuppliers } = useMasterData(); // updateProducts と updateSuppliers を取得
+  const { masterData, isLoadingMasterData, masterDataError, updateProducts, updateSuppliers } = useMasterData();
 
   useEffect(() => {
-    fetchProducts();
-    fetchSuppliers(); // 仕入先データを取得
-  }, []);
+    if (masterData && masterData.products) {
+      const productsWithId = masterData.products.map((product, index) => ({
+        id: product["商品コード"] || index,
+        ...product,
+      }));
+      setProducts(productsWithId);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await sendGetRequest('getProducts');
-      if (result.status === 'success') {
-        const productsWithId = result.data.map((product, index) => ({
-          id: product["商品コード"] || index, // 商品コードをidとして使用、なければindex
-          ...product,
-        }));
-        setProducts(productsWithId);
-        updateProducts(result.data); // MasterDataContext を更新
-
-        const lotUnitsSet = new Set(result.data.map(p => p['ロット単位']).filter(Boolean));
-        const pieceUnitsSet = new Set(result.data.map(p => p['バラ単位']).filter(Boolean));
-        setLotUnits([...lotUnitsSet]);
-        setPieceUnits([...pieceUnitsSet]);
-
-      } else {
-        throw new Error(result.message || '商品データの取得に失敗しました。');
-      }
-    } catch (err) {
-      setError('商品データの取得に失敗しました。');
-      console.error('Failed to fetch products:', err);
-    } finally {
-      setLoading(false);
+      const lotUnitsSet = new Set(masterData.products.map(p => p['ロット単位']).filter(Boolean));
+      const pieceUnitsSet = new Set(masterData.products.map(p => p['バラ単位']).filter(Boolean));
+      setLotUnits([...lotUnitsSet]);
+      setPieceUnits([...pieceUnitsSet]);
     }
-  };
-
-  const fetchSuppliers = async () => {
-    try {
-      const result = await sendGetRequest('getSuppliers');
-      if (result.status === 'success') {
-        setSuppliers(result.data);
-        updateSuppliers(result.data); // MasterDataContext を更新
-      } else {
-        console.error('Failed to fetch suppliers:', result.message);
-      }
-    } catch (err) {
-      console.error('Failed to fetch suppliers:', err);
+    if (masterDataError) {
+      setError(masterDataError);
     }
-  };
+  }, [masterData, masterDataError]);
+
+  // 仕入先リストはMasterDataContextから直接取得
+  const suppliers = masterData?.suppliers || [];
 
   // フィルターされた商品リスト
   const filteredProducts = products.filter(product =>
@@ -214,7 +182,7 @@ function ProductMasterPage() {
     setViewingProduct(null);
   };
 
-  if (loading) {
+  if (isLoadingMasterData) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
@@ -223,11 +191,11 @@ function ProductMasterPage() {
     );
   }
 
-  if (error) {
+  if (masterDataError) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-        <Button variant="contained" onClick={fetchProducts} sx={{ mt: 2 }}>
+        <Alert severity="error">{masterDataError}</Alert>
+        <Button variant="contained" onClick={() => window.location.reload()} sx={{ mt: 2 }}>
           再試行
         </Button>
       </Box>
@@ -325,7 +293,7 @@ function ProductMasterPage() {
       <AddProductDialog
         open={isAddDialogOpen}
         handleClose={handleCloseAddDialog}
-        onProductAdded={fetchProducts}
+        onProductAdded={updateProducts} // MasterDataContext を更新する関数を渡す
         products={products}
         suppliers={suppliers}
         lotUnits={lotUnits}
@@ -335,7 +303,7 @@ function ProductMasterPage() {
         open={isEditDialogOpen}
         handleClose={handleCloseEditDialog}
         product={editingProduct}
-        onProductUpdated={fetchProducts}
+        onProductUpdated={updateProducts} // MasterDataContext を更新する関数を渡す
         products={products}
         suppliers={suppliers}
         lotUnits={lotUnits}
