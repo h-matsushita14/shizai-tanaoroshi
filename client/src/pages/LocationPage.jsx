@@ -186,6 +186,41 @@ function LocationPage() {
     }));
   };
 
+  const updateSelectedLocationForForm = useCallback((updatedLocationsHierarchy) => {
+    if (!selectedLocationForForm || !updatedLocationsHierarchy) return;
+
+    let foundLocation = null;
+    let parentArea = null;
+
+    for (const group of updatedLocationsHierarchy) {
+      for (const area of group.storageAreas) {
+        if (area.id === selectedLocationForForm.id) {
+          foundLocation = area;
+          parentArea = area;
+          break;
+        }
+        const detail = area.details.find(d => d.id === selectedLocationForForm.id);
+        if (detail) {
+          foundLocation = detail;
+          parentArea = area;
+          break;
+        }
+      }
+      if (foundLocation) break;
+    }
+
+    if (foundLocation && parentArea) {
+      setSelectedLocationForForm(prev => ({
+        ...prev,
+        products: foundLocation.products || []
+      }));
+    } else {
+      // ロケーションが見つからない場合（削除されたなど）はフォームを閉じる
+      setIsFormDialogOpen(false);
+      setSelectedLocationForForm(null);
+    }
+  }, [selectedLocationForForm]);
+
   const handleSaveSuccess = async (savedRecords) => {
     if (!savedRecords || savedRecords.length === 0) return;
 
@@ -194,9 +229,8 @@ function LocationPage() {
       const updatedMasterDataResult = await sendGetRequest('getMasterData');
       if (updatedMasterDataResult.status === 'success') {
         updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
-        // 必要であれば、他のマスターデータも更新
-        // updateProducts(updatedMasterDataResult.data.products);
-        // updateSuppliers(updatedMasterDataResult.data.suppliers);
+        // MasterDataContext更新後、selectedLocationForFormも更新
+        updateSelectedLocationForForm(updatedMasterDataResult.data.locationsHierarchy);
       } else {
         throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
       }
@@ -212,9 +246,8 @@ function LocationPage() {
       const updatedMasterDataResult = await sendGetRequest('getMasterData');
       if (updatedMasterDataResult.status === 'success') {
         updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
-        // 必要であれば、他のマスターデータも更新
-        // updateProducts(updatedMasterDataResult.data.products);
-        // updateSuppliers(updatedMasterDataResult.data.suppliers);
+        // MasterDataContext更新後、selectedLocationForFormも更新
+        updateSelectedLocationForForm(updatedMasterDataResult.data.locationsHierarchy);
       } else {
         throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
       }

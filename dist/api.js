@@ -373,7 +373,8 @@ function doPost(e) {
         responsePayload = {
             status: 'success',
             version: 'shizai-tanaoroshi-gas-ts v1.0',
-            data: payload
+            data: payload,
+            message: '操作が完了しました。' // デフォルトメッセージを追加
         };
     }
     catch (error) {
