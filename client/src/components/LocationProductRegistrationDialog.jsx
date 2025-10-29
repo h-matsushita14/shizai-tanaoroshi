@@ -24,6 +24,9 @@ function LocationProductRegistrationDialog({
     if (open) {
       fetchAllProducts();
       fetchLocationProducts();
+    } else {
+      // ダイアログが閉じられたときにフォーカスをボディに戻す
+      document.body.focus();
     }
   }, [open, locationId]);
 

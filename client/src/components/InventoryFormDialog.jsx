@@ -25,6 +25,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
     if (!open) {
       setProducts([]);
       setQuantities({});
+      // ダイアログが閉じられたときにフォーカスをボディに戻す
+      document.body.focus();
       return;
     }
     // initialProductsが更新されたらproductsステートも更新
@@ -185,7 +187,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                       }
 
                       return (
-                        <>
+                        <> 
                           {lotUnit && lotUnit !== looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <TextField
@@ -308,3 +310,4 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
 }
 
 export default InventoryFormDialog;
+
