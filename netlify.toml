@@ -12,3 +12,8 @@
   to = "/.netlify/functions/gas-proxy" # プロキシ関数へのパス
   status = 200
   force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
