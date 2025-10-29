@@ -55,143 +55,14 @@ function LocationPage() {
     }
   }, [selectedCategory, isDesktop]);
 
-  useEffect(() => {
-    if (!isLoadingMasterData && !masterDataError) {
-      console.log("Fetched data structure:", locations);
-    }
-  }, [isLoadingMasterData, masterDataError, locations]);
-
-  const handleStorageLocationSelect = (storageName, locationId) => {
-    const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
-    if (availableMaps.includes(storageName)) {
-      setSelectedLocation({
-        name: storageName,
-        svgPath: `/floor-plans/${storageName}.svg`
-      });
-      setIsFormDialogOpen(false);
-      setSelectedLocationForForm(null);
-    } else {
-      setSelectedLocation(null);
-
-      let foundLocation = null;
-      let parentArea = null;
-
-      for (const group of locations) {
-        for (const area of group.storageAreas) {
-          if (area.id === locationId) {
-            foundLocation = area;
-            parentArea = area;
-            break;
-          }
-          const detail = area.details.find(d => d.id === locationId);
-          if (detail) {
-            foundLocation = detail;
-            parentArea = area;
-            break;
-          }
-        }
-        if (foundLocation) break;
-      }
-
-      if (foundLocation && parentArea) {
-        setSelectedLocationForForm({
-          id: locationId,
-          name: parentArea.name,
-          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
-          products: foundLocation.products || [] // 製品情報を追加
-        });
-        setIsFormDialogOpen(true);
-      } else {
-        console.log(`No matching location found for ID: ${locationId}`);
-        setIsFormDialogOpen(false);
-        setSelectedLocationForForm(null);
-      }
-    }
-    if (isMobile || isTablet) {
-      setMobileOpen(false);
-    }
-  };
-
-  const handleAreaClickOnMap = (areaId) => {
-    console.log("handleAreaClickOnMap called with:", areaId);
-    let foundLocation = null;
-    let parentArea = null;
-    let parentCategory = null;
-
-    for (const group of locations) {
-      for (const area of group.storageAreas) {
-        const detail = area.details.find(d => d.id === areaId);
-        if (detail) {
-          foundLocation = detail;
-          parentArea = area;
-          parentCategory = group.category;
-          break;
-        }
-        if (area.id === areaId) {
-          foundLocation = area;
-          parentArea = area;
-          parentCategory = group.category;
-          break;
-        }
-      }
-      if (foundLocation) break;
-    }
-
-    console.log("Found foundLocation:", foundLocation);
-    console.log("Found parentArea:", parentArea);
-    console.log("Found parentCategory:", parentCategory);
-
-    if (foundLocation && parentArea && parentCategory) {
-      const availableMaps = ['出荷準備室', '資材室', '段ボール倉庫', '発送室', '包装室', '第二加工室'];
-
-      if (foundLocation.id === parentArea.id && availableMaps.includes(parentArea.name)) {
-        setSelectedLocation({
-          name: parentArea.name,
-          svgPath: `/floor-plans/${parentArea.name}.svg`
-        });
-        setSelectedCategory(parentCategory);
-        setSelectedStorageArea(parentArea.name);
-        setIsFormDialogOpen(false);
-        setSelectedLocationForForm(null);
-      } else {
-        setSelectedLocationForForm({
-          id: areaId,
-          name: parentArea.name,
-          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
-          products: foundLocation.products || [] // 製品情報を追加
-        });
-        setIsFormDialogOpen(true);
-        setSelectedCategory(parentCategory);
-        setSelectedStorageArea(parentArea.name);
-        console.log("Opening form dialog for:", areaId);
-      }
-    } else {
-      console.log(`No matching location found for areaId: ${areaId}`);
-      setIsFormDialogOpen(false);
-      setSelectedLocationForForm(null);
-    }
-  };
-
-  const handleCategoryChange = (category) => (event, isExpanded) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [category]: isExpanded,
-    }));
-  };
-
-  const handleStorageAreaChange = (areaId) => (event, isExpanded) => {
-    setExpandedStorageAreas((prev) => ({
-      ...prev,
-      [areaId]: isExpanded,
-    }));
-  };
-
+  // selectedLocationForForm (棚卸ダイアログの初期データ) を更新する関数
   const updateSelectedLocationForForm = useCallback((updatedLocationsHierarchy) => {
     if (!selectedLocationForForm || !updatedLocationsHierarchy) return;
 
     let foundLocation = null;
     let parentArea = null;
 
+    // 最新の階層データから、現在選択されているロケーションの商品情報を再取得
     for (const group of updatedLocationsHierarchy) {
       for (const area of group.storageAreas) {
         if (area.id === selectedLocationForForm.id) {
@@ -224,35 +95,35 @@ function LocationPage() {
   const handleSaveSuccess = async (savedRecords) => {
     if (!savedRecords || savedRecords.length === 0) return;
 
-    // MasterDataContext を更新するために、最新のマスターデータをGASから再取得
+    // MasterDataContext を更新するために、必要なデータのみをGASから再取得
     try {
-      const updatedMasterDataResult = await sendGetRequest('getMasterData');
-      if (updatedMasterDataResult.status === 'success') {
-        updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
+      const updatedLocationsResult = await sendGetRequest('getLocations'); // getMasterData -> getLocations
+      if (updatedLocationsResult.status === 'success') {
+        updateLocationsHierarchy(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
         // MasterDataContext更新後、selectedLocationForFormも更新
-        updateSelectedLocationForForm(updatedMasterDataResult.data.locationsHierarchy);
+        updateSelectedLocationForForm(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
       } else {
-        throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
+        throw new Error(updatedLocationsResult.message || 'ロケーションデータの再取得に失敗しました。');
       }
     } catch (err) {
-      console.error('Failed to re-fetch master data after save:', err);
+      console.error('Failed to re-fetch location data after save:', err);
       // エラーハンドリング
     }
   };
 
   const handleProductListUpdated = async () => {
-    // 商品リスト更新後、MasterDataContext を更新するために、最新のマスターデータをGASから再取得
+    // 商品リスト更新後、MasterDataContext を更新するために、必要なデータのみをGASから再取得
     try {
-      const updatedMasterDataResult = await sendGetRequest('getMasterData');
-      if (updatedMasterDataResult.status === 'success') {
-        updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
+      const updatedLocationsResult = await sendGetRequest('getLocations'); // getMasterData -> getLocations
+      if (updatedLocationsResult.status === 'success') {
+        updateLocationsHierarchy(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
         // MasterDataContext更新後、selectedLocationForFormも更新
-        updateSelectedLocationForForm(updatedMasterDataResult.data.locationsHierarchy);
+        updateSelectedLocationForForm(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
       } else {
-        throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
+        throw new Error(updatedLocationsResult.message || 'ロケーションデータの再取得に失敗しました。');
       }
     } catch (err) {
-      console.error('Failed to re-fetch master data after product list update:', err);
+      console.error('Failed to re-fetch location data after product list update:', err);
       // エラーハンドリング
     }
   };
