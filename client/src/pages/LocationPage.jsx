@@ -137,6 +137,45 @@ function LocationPage() {
   const mobileFixedHeaderHeight = `${appBarHeight}px`;
   const effectiveFixedHeaderHeight = isDesktop ? desktopFixedHeaderHeight : mobileFixedHeaderHeight;
 
+  const handleAreaClickOnMap = (locationId) => {
+    if (!locations) return;
+
+    let foundLocation = null;
+    let parentAreaName = '';
+    let detailName = '';
+
+    for (const group of locations) {
+      for (const area of group.storageAreas) {
+        if (area.id === locationId) {
+          foundLocation = area;
+          parentAreaName = area.name;
+          break;
+        }
+        const detail = area.details.find(d => d.id === locationId);
+        if (detail) {
+          foundLocation = detail;
+          parentAreaName = area.name;
+          detailName = detail.name;
+          break;
+        }
+      }
+      if (foundLocation) break;
+    }
+
+    if (foundLocation) {
+      setSelectedLocationForForm({
+        id: foundLocation.id,
+        name: parentAreaName,
+        detail: detailName,
+        products: foundLocation.products || [],
+      });
+      setIsFormDialogOpen(true);
+    } else {
+      console.warn(`Location with ID: ${locationId} not found in master data.`);
+      // 必要であれば、ユーザーに通知する処理を追加
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex' }}>
       {isDesktop ? (

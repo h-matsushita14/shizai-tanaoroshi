@@ -33,9 +33,11 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
     setProducts(initialProducts || []);
     // quantitiesの初期化
     const initialQuantities = {};
-    (initialProducts || []).forEach(product => {
-      initialQuantities[product.productCode] = { lot: '', loose: '' }; // 初期値は空
-    });
+    if (initialProducts) {
+      initialProducts.forEach(product => {
+        initialQuantities[product.productCode] = { lot: '', loose: '' }; // 初期値は空
+      });
+    }
     setQuantities(initialQuantities);
 
   }, [open, initialProducts]);
@@ -66,7 +68,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
           ロット単位: product.lotUnit || '',
           バラ数量: looseQuantity !== '' ? parseInt(looseQuantity, 10) : 0,
           バラ単位: product.pieceUnit || '',
-          記録時単価: product["単価"] || 0, // Product_Masterの単価を使用
+          記録時単価: product.単価 || 0, // Product_Masterの単価を使用
           担当者: '未設定', // TODO: 担当者入力フィールドを追加
           備考: '', // TODO: 備考入力フィールドを追加
         });
@@ -153,16 +155,16 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                                     <ListItem key={product.productCode} divider sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>                  {/* 1行目: 社内名称、直近の記録日、詳細ボタン */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                     <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
-                      {product["internalName"] || '-'} {/* 変更 */}
+                      {product.internalName || '-'} {/* 変更 */}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
-                      {product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'} 
+                      {product.記録日時 ? new Date(product.記録日時).toLocaleDateString() : '-'} 
                     </Typography>
                     <Tooltip
                       title={
                         <Box>
                           <Typography variant="body2">商品コード: {product.productCode}</Typography>
-                          <Typography variant="body2">商品名: {product["productName"]}</Typography> {/* 変更 */}
+                          <Typography variant="body2">商品名: {product.productName}</Typography> {/* 変更 */}
                         </Box>
                       }
                       arrow
@@ -179,8 +181,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                   {/* 2行目: ロット数量、ロット単位、バラ数量、バラ単位 */}
                   <Box sx={{ mt: 0.5, width: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
                     {(() => {
-                      const lotUnit = formatUnit(product["lotUnit"]); // 変更
-                      const looseUnit = formatUnit(product["pieceUnit"]); // 変更
+                      const lotUnit = formatUnit(product.lotUnit); // 変更
+                      const looseUnit = formatUnit(product.pieceUnit); // 変更
 
                       if (!lotUnit && !looseUnit) {
                         return null;
@@ -242,8 +244,8 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                     return (
                       <TableRow key={product.productCode}>
                         <TableCell>{product.productCode}</TableCell>
-                        <TableCell>{product["productName"]}</TableCell>
-                        <TableCell>{product["internalName"]}</TableCell> {/* 変更 */}
+                        <TableCell>{product.productName}</TableCell>
+                        <TableCell>{product.internalName}</TableCell> {/* 変更 */}
                         <TableCell sx={{ width: '100px' }}> {/* ロット数量入力欄 */}
                           {lotUnit && lotUnit !== looseUnit && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -275,7 +277,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
                           )}
                         </TableCell>
                         <TableCell>
-                          {product["記録日時"] ? new Date(product["記録日時"]).toLocaleDateString() : '-'}
+                          {product.記録日時 ? new Date(product.記録日時).toLocaleDateString() : '-'}
                         </TableCell>
                       </TableRow>
                     );
