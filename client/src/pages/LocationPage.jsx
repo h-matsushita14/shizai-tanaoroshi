@@ -20,7 +20,7 @@ const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
 function LocationPage() {
-  const { masterData, isLoadingMasterData, masterDataError } = useMasterData();
+  const { masterData, isLoadingMasterData, masterDataError, updateLocationsHierarchy } = useMasterData();
   const [locations, setLocations] = useState([]);
 
   useEffect(() => {
@@ -186,41 +186,42 @@ function LocationPage() {
     }));
   };
 
-  const handleSaveSuccess = (savedRecords) => {
+  const handleSaveSuccess = async (savedRecords) => {
     if (!savedRecords || savedRecords.length === 0) return;
 
-    const updatedLocations = JSON.parse(JSON.stringify(locations)); // Deep copy
-    const today = new Date().toISOString();
-
-    savedRecords.forEach(record => {
-      const locationId = record.ロケーションID;
-      const productCode = record.商品コード;
-
-      for (const categoryGroup of updatedLocations) {
-        for (const storageArea of categoryGroup.storageAreas) {
-          let targetLocation = null;
-          if (storageArea.id === locationId) {
-            targetLocation = storageArea;
-          } else {
-            targetLocation = storageArea.details.find(d => d.id === locationId);
-          }
-
-          if (targetLocation) {
-            targetLocation.inventoryStatus = 'recorded';
-            const product = targetLocation.products.find(p => p.商品コード === productCode);
-            if (product) {
-              product.記録日時 = today;
-            }
-            // 親のステータスも更新
-            if (storageArea.details.some(d => d.id === locationId)) {
-               storageArea.inventoryStatus = 'recorded';
-            }
-            break; // このrecordに対する処理は終わったので次のrecordへ
-          }
-        }
+    // MasterDataContext を更新するために、最新のマスターデータをGASから再取得
+    try {
+      const updatedMasterDataResult = await sendGetRequest('getMasterData');
+      if (updatedMasterDataResult.status === 'success') {
+        updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
+        // 必要であれば、他のマスターデータも更新
+        // updateProducts(updatedMasterDataResult.data.products);
+        // updateSuppliers(updatedMasterDataResult.data.suppliers);
+      } else {
+        throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
       }
-    });
-    setLocations(updatedLocations);
+    } catch (err) {
+      console.error('Failed to re-fetch master data after save:', err);
+      // エラーハンドリング
+    }
+  };
+
+  const handleProductListUpdated = async () => {
+    // 商品リスト更新後、MasterDataContext を更新するために、最新のマスターデータをGASから再取得
+    try {
+      const updatedMasterDataResult = await sendGetRequest('getMasterData');
+      if (updatedMasterDataResult.status === 'success') {
+        updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
+        // 必要であれば、他のマスターデータも更新
+        // updateProducts(updatedMasterDataResult.data.products);
+        // updateSuppliers(updatedMasterDataResult.data.suppliers);
+      } else {
+        throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
+      }
+    } catch (err) {
+      console.error('Failed to re-fetch master data after product list update:', err);
+      // エラーハンドリング
+    }
   };
 
 
@@ -512,6 +513,7 @@ function LocationPage() {
           locationDetail={selectedLocationForForm.detail}
           initialProducts={selectedLocationForForm.products} // 製品情報を追加
           onSaveSuccess={handleSaveSuccess}
+          onProductListUpdated={handleProductListUpdated} // 追加
         />
       )}
     </Box>
