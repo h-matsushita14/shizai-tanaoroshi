@@ -194,7 +194,8 @@ function getMasterData() {
     return {
         products,
         suppliers,
-        locationsMaster: formattedLocations, // 'locations' から 'locationsMaster' に変更
+        locationsMaster: locationsMaster, // Location_Masterシートの生データ
+        locationsHierarchy: formattedLocations, // 階層構造のロケーションデータ
         locationProductMappings,
     };
 }

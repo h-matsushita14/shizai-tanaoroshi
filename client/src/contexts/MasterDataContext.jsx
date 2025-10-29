@@ -14,7 +14,13 @@ export const MasterDataProvider = ({ children }) => {
       try {
         const result = await sendGetRequest('getMasterData');
         if (result.status === 'success') {
-          setMasterData(result.data);
+          setMasterData({
+            products: result.data.products,
+            suppliers: result.data.suppliers,
+            locationsMaster: result.data.locationsMaster, // Location_Masterシートの生データ
+            locationsHierarchy: result.data.locationsHierarchy, // 階層構造のロケーションデータ
+            locationProductMappings: result.data.locationProductMappings,
+          });
         } else {
           throw new Error(result.message || 'マスターデータの取得に失敗しました。');
         }
@@ -41,6 +47,10 @@ export const MasterDataProvider = ({ children }) => {
     setMasterData(prevData => ({ ...prevData, locationsMaster: newLocationsMaster }));
   }, []);
 
+  const updateLocationsHierarchy = useCallback((newLocationsHierarchy) => {
+    setMasterData(prevData => ({ ...prevData, locationsHierarchy: newLocationsHierarchy }));
+  }, []);
+
   const updateLocationProductMappings = useCallback((newMappings) => {
     setMasterData(prevData => ({ ...prevData, locationProductMappings: newMappings }));
   }, []);
@@ -55,6 +65,7 @@ export const MasterDataProvider = ({ children }) => {
     updateProducts,
     updateSuppliers,
     updateLocationsMaster,
+    updateLocationsHierarchy,
     updateLocationProductMappings,
   };
 

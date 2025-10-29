@@ -55,7 +55,7 @@ function LocationMasterPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const { masterData, isLoadingMasterData, masterDataError, updateLocationsMaster } = useMasterData();
+  const { masterData, isLoadingMasterData, masterDataError, updateLocationsMaster, updateLocationsHierarchy } = useMasterData();
 
   useEffect(() => {
     if (masterData && masterData.locationsMaster) {
@@ -146,6 +146,7 @@ function LocationMasterPage() {
         const updatedMasterDataResult = await sendGetRequest('getMasterData');
         if (updatedMasterDataResult.status === 'success') {
           updateLocationsMaster(updatedMasterDataResult.data.locationsMaster);
+          updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
         } else {
           throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
         }
@@ -174,6 +175,7 @@ function LocationMasterPage() {
           const updatedMasterDataResult = await sendGetRequest('getMasterData');
           if (updatedMasterDataResult.status === 'success') {
             updateLocationsMaster(updatedMasterDataResult.data.locationsMaster);
+            updateLocationsHierarchy(updatedMasterDataResult.data.locationsHierarchy);
           } else {
             throw new Error(updatedMasterDataResult.message || 'マスターデータの再取得に失敗しました。');
           }
