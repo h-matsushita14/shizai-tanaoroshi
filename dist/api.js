@@ -194,8 +194,8 @@ function getMasterData() {
     return {
         products,
         suppliers,
-        locations: formattedLocations, // 階層構造のロケーションデータ
-        locationProductMappings, // 元のデータも残しておく
+        locationsMaster: formattedLocations, // 'locations' から 'locationsMaster' に変更
+        locationProductMappings,
     };
 }
 /**
