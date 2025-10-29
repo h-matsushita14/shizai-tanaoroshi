@@ -98,8 +98,7 @@ function SupplierMasterPage() {
 
   const handleEditClick = (supplier) => {
     setEditingSupplier(supplier);
-    setNewSupplierName(supplier["仕入先名']);
-    setOpenDialog(true);
+          setNewSupplierName(supplier["仕入先名"]);    setOpenDialog(true);
   };
 
   const handleDeleteClick = async (supplierId) => {
