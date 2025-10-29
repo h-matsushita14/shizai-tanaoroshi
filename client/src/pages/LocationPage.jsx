@@ -24,8 +24,8 @@ function LocationPage() {
   const [locations, setLocations] = useState([]);
 
   useEffect(() => {
-    if (masterData?.locations) {
-      setLocations(masterData.locations);
+    if (masterData?.locationsHierarchy) {
+      setLocations(masterData.locationsHierarchy);
     }
   }, [masterData]);
 
