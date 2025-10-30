@@ -44,6 +44,13 @@ function LocationPage() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const handleCategoryChange = (category) => (event, isExpanded) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: isExpanded,
+    }));
+  };
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
