@@ -55,6 +55,15 @@ function LocationPage() {
     setMobileOpen(!mobileOpen);
   };
 
+  const handleStorageLocationSelect = (name, id) => {
+    const svgPath = `/floor-plans/${name}.svg`;
+    setSelectedLocation({
+      id: id,
+      name: name,
+      svgPath: svgPath,
+    });
+  };
+
   useEffect(() => {
     if (!isDesktop) {
         setSelectedStorageArea('');
