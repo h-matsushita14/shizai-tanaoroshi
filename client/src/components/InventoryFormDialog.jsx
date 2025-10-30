@@ -89,7 +89,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
       if (result.status === 'success') {
         alert('棚卸データを正常に保存しました。');
         if (onSaveSuccess) {
-          onSaveSuccess(result.addedRecords); // 保存されたデータを渡す
+          onSaveSuccess(result.data.addedRecords); // 保存されたデータを渡す
         }
         onClose(); // 保存後にダイアログを閉じる
       } else {
