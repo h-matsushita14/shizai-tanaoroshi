@@ -56,12 +56,53 @@ function LocationPage() {
   };
 
   const handleStorageLocationSelect = (name, id) => {
-    const svgPath = `/floor-plans/${name}.svg`;
-    setSelectedLocation({
-      id: id,
-      name: name,
-      svgPath: svgPath,
-    });
+    const availableMaps = ['資材室', '出荷準備室', '第二加工室', '段ボール倉庫', '発送室', '包装室'];
+    if (availableMaps.includes(name)) {
+      const svgPath = `/floor-plans/${name}.svg`;
+      setSelectedLocation({
+        id: id,
+        name: name,
+        svgPath: svgPath,
+      });
+      setIsFormDialogOpen(false);
+      setSelectedLocationForForm(null);
+    } else {
+      setSelectedLocation(null);
+
+      let foundLocation = null;
+      let parentArea = null;
+
+      for (const group of locations) {
+        for (const area of group.storageAreas) {
+          if (area.id === id) {
+            foundLocation = area;
+            parentArea = area;
+            break;
+          }
+          const detail = area.details.find(d => d.id === id);
+          if (detail) {
+            foundLocation = detail;
+            parentArea = area;
+            break;
+          }
+        }
+        if (foundLocation) break;
+      }
+
+      if (foundLocation && parentArea) {
+        setSelectedLocationForForm({
+          id: id,
+          name: parentArea.name,
+          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
+          products: foundLocation.products || [],
+        });
+        setIsFormDialogOpen(true);
+      } else {
+        console.log(`No matching location found for ID: ${id}`);
+        setIsFormDialogOpen(false);
+        setSelectedLocationForForm(null);
+      }
+    }
   };
 
   useEffect(() => {
