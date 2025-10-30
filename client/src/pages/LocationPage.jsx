@@ -20,7 +20,7 @@ const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
 function LocationPage() {
-  const { masterData, isLoadingMasterData, masterDataError, updateLocationsHierarchy } = useMasterData();
+  const { masterData, isLoadingMasterData, masterDataError, updateLocationsHierarchy, setMasterData } = useMasterData();
   const [locations, setLocations] = useState([]);
 
   useEffect(() => {
@@ -113,57 +113,52 @@ function LocationPage() {
   }, [selectedCategory, isDesktop]);
 
   // selectedLocationForForm (棚卸ダイアログの初期データ) を更新する関数
-  const updateSelectedLocationForForm = useCallback((updatedLocationsHierarchy) => {
-    if (!selectedLocationForForm || !updatedLocationsHierarchy) return;
-
-    let foundLocation = null;
-    let parentArea = null;
-
-    // 最新の階層データから、現在選択されているロケーションの商品情報を再取得
-    for (const group of updatedLocationsHierarchy) {
-      for (const area of group.storageAreas) {
-        if (area.id === selectedLocationForForm.id) {
-          foundLocation = area;
-          parentArea = area;
-          break;
-        }
-        const detail = area.details.find(d => d.id === selectedLocationForForm.id);
-        if (detail) {
-          foundLocation = detail;
-          parentArea = area;
-          break;
-        }
-      }
-      if (foundLocation) break;
-    }
-
-    if (foundLocation && parentArea) {
-      setSelectedLocationForForm(prev => ({
-        ...prev,
-        products: foundLocation.products || []
-      }));
-    } else {
-      // ロケーションが見つからない場合（削除されたなど）はフォームを閉じる
-      setIsFormDialogOpen(false);
-      setSelectedLocationForForm(null);
-    }
-  }, [selectedLocationForForm]);
-
-  const handleSaveSuccess = async (savedRecords) => {
+  const handleSaveSuccess = useCallback((savedRecords) => {
     if (!savedRecords || savedRecords.length === 0) return;
 
-    // MasterDataContext を更新するために、保存されたデータを使って直接更新
-    // selectedLocationForForm の products を更新する
+    // MasterDataContext の locationsHierarchy を直接更新する
+    setMasterData(prevMasterData => {
+      if (!prevMasterData || !prevMasterData.locationsHierarchy) return prevMasterData;
+
+      const newLocationsHierarchy = prevMasterData.locationsHierarchy.map(group => ({
+        ...group,
+        storageAreas: group.storageAreas.map(area => ({
+          ...area,
+          details: area.details.map(detail => {
+            // 現在選択されているロケーションのIDと一致する場合のみ更新
+            if (detail.id === selectedLocationForForm?.id) {
+              const updatedProducts = detail.products.map(product => {
+                const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+                if (savedRecord) {
+                  return {
+                    ...product,
+                    棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
+                    記録日時: savedRecord.記録日時, // サーバーから返された記録日時を使用
+                  };
+                }
+                return product;
+              });
+              return { ...detail, products: updatedProducts };
+            }
+            return detail;
+          }),
+        })),
+      }));
+
+      return { ...prevMasterData, locationsHierarchy: newLocationsHierarchy };
+    });
+
+    // selectedLocationForForm の products も更新して、ダイアログを再度開いたときに最新の状態を反映させる
     setSelectedLocationForForm(prev => {
       if (!prev) return null;
 
       const updatedProducts = prev.products.map(product => {
-        const savedRecord = savedRecords.find(rec => rec.商品コード === product.商品コード);
+        const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
         if (savedRecord) {
           return {
             ...product,
-            棚卸数量: savedRecord.ロット数量 + savedRecord.バラ数量,
-            記録日時: new Date(), // 保存日時を記録
+            棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
+            記録日時: savedRecord.記録日時, // サーバーから返された記録日時を使用
           };
         }
         return product;
@@ -174,19 +169,16 @@ function LocationPage() {
         products: updatedProducts,
       };
     });
-
-    // 必要であれば、MasterDataContext全体の更新も考慮するが、今回はselectedLocationForFormの更新に限定
-    // updateLocationsHierarchy(updatedLocationsResult.data); // 不要になる
-  };
+  }, [selectedLocationForForm, setMasterData]);
 
   const handleProductListUpdated = async () => {
     // 商品リスト更新後、MasterDataContext を更新するために、必要なデータのみをGASから再取得
     try {
       const updatedLocationsResult = await sendGetRequest('getLocations'); // getMasterData -> getLocations
       if (updatedLocationsResult.status === 'success') {
-        updateLocationsHierarchy(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
+        updateLocationsHierarchy(updatedLocationsResult.data.locationsHierarchy); // result.data.locationsHierarchy -> result.data
         // MasterDataContext更新後、selectedLocationForFormも更新
-        updateSelectedLocationForForm(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
+        // updateSelectedLocationForForm(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
       } else {
         throw new Error(updatedLocationsResult.message || 'ロケーションデータの再取得に失敗しました。');
       }
