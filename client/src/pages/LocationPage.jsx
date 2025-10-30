@@ -114,6 +114,7 @@ function LocationPage() {
 
   // selectedLocationForForm (棚卸ダイアログの初期データ) を更新する関数
   const handleSaveSuccess = useCallback((savedRecords) => {
+    console.log('handleSaveSuccess: savedRecords', savedRecords);
     if (!savedRecords || savedRecords.length === 0) return;
 
     // MasterDataContext の locationsHierarchy を直接更新する
@@ -121,6 +122,7 @@ function LocationPage() {
       if (!prevMasterData || !prevMasterData.locationsHierarchy) return prevMasterData;
 
       const targetLocationId = savedRecords[0]["ロケーションID"]; // 保存されたレコードのロケーションIDを取得
+      console.log('handleSaveSuccess: targetLocationId', targetLocationId);
 
       const newLocationsHierarchy = prevMasterData.locationsHierarchy.map(group => ({
         ...group,
@@ -146,7 +148,7 @@ function LocationPage() {
           }),
         })),
       }));
-
+      console.log('handleSaveSuccess: newLocationsHierarchy after update', newLocationsHierarchy);
       return { ...prevMasterData, locationsHierarchy: newLocationsHierarchy };
     });
 
@@ -165,7 +167,7 @@ function LocationPage() {
         }
         return product;
       });
-
+      console.log('handleSaveSuccess: selectedLocationForForm after update', { ...prev, products: updatedProducts });
       return {
         ...prev,
         products: updatedProducts,
