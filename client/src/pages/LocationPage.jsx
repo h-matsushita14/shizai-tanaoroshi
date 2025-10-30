@@ -148,7 +148,7 @@ function LocationPage() {
           }),
         })),
       }));
-      console.log('handleSaveSuccess: newLocationsHierarchy after update', newLocationsHierarchy);
+      console.log('handleSaveSuccess: newLocationsHierarchy after update', JSON.stringify(newLocationsHierarchy, null, 2));
       return { ...prevMasterData, locationsHierarchy: newLocationsHierarchy };
     });
 
@@ -167,7 +167,7 @@ function LocationPage() {
         }
         return product;
       });
-      console.log('handleSaveSuccess: selectedLocationForForm after update', { ...prev, products: updatedProducts });
+      console.log('handleSaveSuccess: selectedLocationForForm after update', JSON.stringify({ ...prev, products: updatedProducts }, null, 2));
       return {
         ...prev,
         products: updatedProducts,
@@ -227,7 +227,7 @@ function LocationPage() {
     }
 
     if (foundLocation) {
-      console.log('handleStorageLocationSelect: foundLocation.products', foundLocation.products);
+      console.log('handleStorageLocationSelect: foundLocation.products', JSON.stringify(foundLocation.products, null, 2));
       setSelectedLocationForForm({
         id: foundLocation.id,
         name: parentAreaName,
