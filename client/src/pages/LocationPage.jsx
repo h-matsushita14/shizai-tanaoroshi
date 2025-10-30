@@ -126,28 +126,43 @@ function LocationPage() {
 
       const newLocationsHierarchy = prevMasterData.locationsHierarchy.map(group => ({
         ...group,
-        storageAreas: group.storageAreas.map(area => ({
-          ...area,
-          details: area.details.map(detail => {
-            // 保存されたレコードのロケーションIDと一致する場合のみ更新
-            if (detail.id === targetLocationId) {
-              const updatedProducts = detail.products.map(product => {
-                const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
-                if (savedRecord) {
-                  return {
-                    ...product,
-                    棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-                    記録日時: new Date(savedRecord.記録日時).toISOString(), // サーバーから返された記録日時を使用し、ISO文字列に変換
-                  };
-                }
-                return product;
-              });
-              return { ...detail, products: updatedProducts };
-            }
-            return detail;
-          }),
-        })),
-      }));
+                  storageAreas: group.storageAreas.map(area => {
+                    // area自体がロケーションIDを持つ場合（詳細を持たないロケーション）
+                    if (area.id === targetLocationId) {
+                      const updatedProducts = area.products.map(product => {
+                        const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+                        if (savedRecord) {
+                          return {
+                            ...product,
+                            棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
+                            記録日時: new Date(savedRecord.記録日時).toISOString(),
+                          };
+                        }
+                        return product;
+                      });
+                      return { ...area, products: updatedProducts };
+                    }
+        
+                    // detailsを持つロケーションの場合
+                    const updatedDetails = area.details.map(detail => {
+                      if (detail.id === targetLocationId) {
+                        const updatedProducts = detail.products.map(product => {
+                          const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+                          if (savedRecord) {
+                            return {
+                              ...product,
+                              棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
+                              記録日時: new Date(savedRecord.記録日時).toISOString(),
+                            };
+                          }
+                          return product;
+                        });
+                        return { ...detail, products: updatedProducts };
+                      }
+                      return detail;
+                    });
+                    return { ...area, details: updatedDetails };
+                  }),      }));
       console.log('handleSaveSuccess: newLocationsHierarchy after update', JSON.stringify(newLocationsHierarchy, null, 2));
       return { ...prevMasterData, locationsHierarchy: newLocationsHierarchy };
     });
