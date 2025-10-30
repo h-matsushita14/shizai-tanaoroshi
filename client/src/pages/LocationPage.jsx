@@ -149,6 +149,7 @@ function LocationPage() {
     });
 
     // selectedLocationForForm の products も更新して、ダイアログを再度開いたときに最新の状態を反映させる
+    console.log('handleSaveSuccess: updating selectedLocationForForm with savedRecords', savedRecords);
     setSelectedLocationForForm(prev => {
       if (!prev) return null;
 
@@ -223,6 +224,7 @@ function LocationPage() {
     }
 
     if (foundLocation) {
+      console.log('handleStorageLocationSelect: foundLocation.products', foundLocation.products);
       setSelectedLocationForForm({
         id: foundLocation.id,
         name: parentAreaName,

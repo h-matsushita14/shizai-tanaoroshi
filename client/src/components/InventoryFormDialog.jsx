@@ -29,6 +29,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
       document.body.focus();
       return;
     }
+    console.log('InventoryFormDialog: initialProducts', initialProducts);
     // initialProductsが更新されたらproductsステートも更新
     setProducts(initialProducts || []);
     // quantitiesの初期化

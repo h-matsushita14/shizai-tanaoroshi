@@ -244,7 +244,14 @@ function addInventoryRecords(requestBody) {
         const startRow = inventorySheet.getLastRow() + 1;
         inventorySheet.getRange(startRow, 1, newRows.length, newRows[0].length).setValues(newRows);
     }
-    return { message: `${newRows.length}件の棚卸記録が正常に追加されました。`, count: newRows.length };
+    const addedRecords = newRows.map(row => {
+        const record = {};
+        inventoryHeaders.forEach((header, index) => {
+            record[header] = row[index];
+        });
+        return record;
+    });
+    return { message: `${newRows.length}件の棚卸記録が正常に追加されました。`, count: newRows.length, addedRecords: addedRecords };
 }
 /**
  * Cost_Calculationシートの内容を、Inventory_Recordsから集計して更新する
