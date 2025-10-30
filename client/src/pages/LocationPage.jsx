@@ -128,40 +128,41 @@ function LocationPage() {
         ...group,
                   storageAreas: group.storageAreas.map(area => {
                     // area自体がロケーションIDを持つ場合（詳細を持たないロケーション）
-                    if (area.id === targetLocationId) {
-                      const updatedProducts = area.products.map(product => {
-                        const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
-                        if (savedRecord) {
-                          return {
-                            ...product,
-                            棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-                            記録日時: new Date(savedRecord.記録日時).toISOString(),
-                          };
-                        }
-                        return product;
-                      });
-                      return { ...area, products: updatedProducts };
-                    }
-        
-                    // detailsを持つロケーションの場合
-                    const updatedDetails = area.details.map(detail => {
-                      if (detail.id === targetLocationId) {
-                        const updatedProducts = detail.products.map(product => {
-                          const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
-                          if (savedRecord) {
-                            return {
-                              ...product,
-                              棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-                              記録日時: new Date(savedRecord.記録日時).toISOString(),
-                            };
-                          }
-                          return product;
-                        });
-                        return { ...detail, products: updatedProducts };
-                      }
-                      return detail;
-                    });
-                    return { ...area, details: updatedDetails };
+                                if (area.id === targetLocationId) {
+                                  console.log('handleSaveSuccess: Matched at area level', area.id); // ★追加
+                                  const updatedProducts = area.products.map(product => {
+                                    const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+                                    if (savedRecord) {
+                                      return {
+                                        ...product,
+                                        棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
+                                        記録日時: new Date(savedRecord.記録日時).toISOString(),
+                                      };
+                                    }
+                                    return product;
+                                  });
+                                  return { ...area, products: updatedProducts };
+                                }
+                    
+                                // detailsを持つロケーションの場合
+                                const updatedDetails = area.details.map(detail => {
+                                  if (detail.id === targetLocationId) {
+                                    console.log('handleSaveSuccess: Matched at detail level', detail.id); // ★追加
+                                    const updatedProducts = detail.products.map(product => {
+                                      const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+                                      if (savedRecord) {
+                                        return {
+                                          ...product,
+                                          棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
+                                          記録日時: new Date(savedRecord.記録日時).toISOString(),
+                                        };
+                                      }
+                                      return product;
+                                    });
+                                    return { ...detail, products: updatedProducts };
+                                  }
+                                  return detail;
+                                });                    return { ...area, details: updatedDetails };
                   }),      }));
       console.log('handleSaveSuccess: newLocationsHierarchy after update', JSON.stringify(newLocationsHierarchy, null, 2));
       return { ...prevMasterData, locationsHierarchy: newLocationsHierarchy };
