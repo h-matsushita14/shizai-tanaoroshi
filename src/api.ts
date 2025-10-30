@@ -159,7 +159,7 @@ function getMasterData() {
             pieceUnit: product["バラ単位"],
             lotUnit: product["ロット単位"],
             inventoryQuantity: totalInventoryQuantity, // Inventory_Recordsから計算
-            lastRecordedDate: latestRecordedDate ? latestRecordedDate.toISOString() : null, // 直近の記録日時を追加
+            記録日時: latestRecordedDate ? latestRecordedDate.toISOString() : null, // 直近の記録日時を追加
           };
         }
         Logger.log("Debug: Product in productsInLocation - " + JSON.stringify({
