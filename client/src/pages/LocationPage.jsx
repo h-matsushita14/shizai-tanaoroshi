@@ -152,20 +152,31 @@ function LocationPage() {
   const handleSaveSuccess = async (savedRecords) => {
     if (!savedRecords || savedRecords.length === 0) return;
 
-    // MasterDataContext を更新するために、必要なデータのみをGASから再取得
-    try {
-      const updatedLocationsResult = await sendGetRequest('getLocations'); // getMasterData -> getLocations
-      if (updatedLocationsResult.status === 'success') {
-        updateLocationsHierarchy(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
-        // MasterDataContext更新後、selectedLocationForFormも更新
-        updateSelectedLocationForForm(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
-      } else {
-        throw new Error(updatedLocationsResult.message || 'ロケーションデータの再取得に失敗しました。');
-      }
-    } catch (err) {
-      console.error('Failed to re-fetch location data after save:', err);
-      // エラーハンドリング
-    }
+    // MasterDataContext を更新するために、保存されたデータを使って直接更新
+    // selectedLocationForForm の products を更新する
+    setSelectedLocationForForm(prev => {
+      if (!prev) return null;
+
+      const updatedProducts = prev.products.map(product => {
+        const savedRecord = savedRecords.find(rec => rec.商品コード === product.商品コード);
+        if (savedRecord) {
+          return {
+            ...product,
+            棚卸数量: savedRecord.ロット数量 + savedRecord.バラ数量,
+            記録日時: new Date(), // 保存日時を記録
+          };
+        }
+        return product;
+      });
+
+      return {
+        ...prev,
+        products: updatedProducts,
+      };
+    });
+
+    // 必要であれば、MasterDataContext全体の更新も考慮するが、今回はselectedLocationForFormの更新に限定
+    // updateLocationsHierarchy(updatedLocationsResult.data); // 不要になる
   };
 
   const handleProductListUpdated = async () => {

@@ -283,7 +283,15 @@ function addInventoryRecords(requestBody) {
     inventorySheet.getRange(startRow, 1, newRows.length, newRows[0].length).setValues(newRows);
   }
 
-  return { message: `${newRows.length}件の棚卸記録が正常に追加されました。`, count: newRows.length };
+  const addedRecords = newRows.map(row => {
+    const record = {};
+    inventoryHeaders.forEach((header, index) => {
+      record[header] = row[index];
+    });
+    return record;
+  });
+
+  return { message: `${newRows.length}件の棚卸記録が正常に追加されました。`, count: newRows.length, addedRecords: addedRecords };
 }
 
 /**
