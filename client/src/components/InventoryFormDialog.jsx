@@ -84,7 +84,7 @@ function InventoryFormDialog({ open, onClose, locationId, locationName, location
     setLoading(true);
     try {
       const result = await sendPostRequest('addInventoryRecord', { records: inventoryData });
-      console.log('InventoryFormDialog: addInventoryRecord result', result);
+      console.log('InventoryFormDialog: addInventoryRecord result', JSON.stringify(result, null, 2));
 
       if (result.status === 'success') {
         alert('棚卸データを正常に保存しました。');
