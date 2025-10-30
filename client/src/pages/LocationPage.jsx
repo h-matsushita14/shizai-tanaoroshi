@@ -120,20 +120,22 @@ function LocationPage() {
     setMasterData(prevMasterData => {
       if (!prevMasterData || !prevMasterData.locationsHierarchy) return prevMasterData;
 
+      const targetLocationId = savedRecords[0]["ロケーションID"]; // 保存されたレコードのロケーションIDを取得
+
       const newLocationsHierarchy = prevMasterData.locationsHierarchy.map(group => ({
         ...group,
         storageAreas: group.storageAreas.map(area => ({
           ...area,
           details: area.details.map(detail => {
-            // 現在選択されているロケーションのIDと一致する場合のみ更新
-            if (detail.id === selectedLocationForForm?.id) {
+            // 保存されたレコードのロケーションIDと一致する場合のみ更新
+            if (detail.id === targetLocationId) {
               const updatedProducts = detail.products.map(product => {
                 const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
                 if (savedRecord) {
                   return {
                     ...product,
                     棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-                    記録日時: savedRecord.記録日時, // サーバーから返された記録日時を使用
+                    記録日時: new Date(savedRecord.記録日時).toISOString(), // サーバーから返された記録日時を使用し、ISO文字列に変換
                   };
                 }
                 return product;
@@ -149,7 +151,6 @@ function LocationPage() {
     });
 
     // selectedLocationForForm の products も更新して、ダイアログを再度開いたときに最新の状態を反映させる
-    console.log('handleSaveSuccess: updating selectedLocationForForm with savedRecords', savedRecords);
     setSelectedLocationForForm(prev => {
       if (!prev) return null;
 
@@ -159,7 +160,7 @@ function LocationPage() {
           return {
             ...product,
             棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-            記録日時: savedRecord.記録日時, // サーバーから返された記録日時を使用
+            記録日時: new Date(savedRecord.記録日時).toISOString(), // サーバーから返された記録日時を使用し、ISO文字列に変換
           };
         }
         return product;
