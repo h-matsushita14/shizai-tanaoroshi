@@ -42,7 +42,6 @@ function LocationPage() {
     setExpandedCategories(prev => ({ ...prev, [category]: isExpanded }));
   };
 
-  // ★★★ 正常だったロジックを元に再構築 ★★★
   const handleLocationSelect = (locationId) => {
     if (!masterData?.locationsHierarchy) {
       console.warn('locationsHierarchy is not ready.');
@@ -51,21 +50,21 @@ function LocationPage() {
 
     let foundLocation = null;
     let parentArea = null;
+    let parentCategory = null; // ★ カテゴリを見つけるために追加
 
-    // 階層データからクリックされた場所と親エリアを特定
     for (const group of masterData.locationsHierarchy) {
       for (const area of group.storageAreas) {
-        // まず詳細(棚など)を探す
         const detail = area.details.find(d => d.id === locationId);
         if (detail) {
           foundLocation = detail;
           parentArea = area;
+          parentCategory = group.category; // ★ カテゴリを保持
           break;
         }
-        // 次にエリア全体(マップを持つ場所など)を探す
         if (area.id === locationId) {
           foundLocation = area;
-          parentArea = area; // 自分自身が親
+          parentArea = area;
+          parentCategory = group.category; // ★ カテゴリを保持
           break;
         }
       }
@@ -79,20 +78,20 @@ function LocationPage() {
 
     const availableMaps = ['資材室', '出荷準備室', '第二加工室', '段ボール倉庫', '発送室', '包装室'];
 
-    // クリックされたのがマップを持つエリア「そのもの」であるかを判定
     if (foundLocation.id === parentArea.id && availableMaps.includes(parentArea.name)) {
-      // マップを持つ場所の場合: マップを切り替え
       const svgPath = `/floor-plans/${parentArea.name}.svg`;
       setSelectedLocation({
         id: locationId,
         name: parentArea.name,
         svgPath: svgPath,
       });
+      // ★★★ UIの状態を連動させる処理を復活 ★★★
+      setSelectedCategory(parentCategory);
+      setSelectedStorageArea(parentArea.name);
+      
       setIsFormDialogOpen(false);
       setSelectedLocationForForm(null);
     } else {
-      // マップ内の詳細な場所(棚など)の場合: ダイアログを開く
-      // 背景のマップは消さない
       setSelectedLocationForForm({
         id: locationId,
         name: parentArea.name,
@@ -103,12 +102,10 @@ function LocationPage() {
     }
   };
 
-  // マップ内クリック時の処理
   const handleAreaClickOnMap = (locationId) => {
     handleLocationSelect(locationId);
   };
 
-  // サイドバーやドロップダウンからの選択処理
   const handleStorageLocationSelectFromMenu = (name, id) => {
     handleLocationSelect(id);
   };
