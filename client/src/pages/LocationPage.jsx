@@ -42,77 +42,64 @@ function LocationPage() {
     setExpandedCategories(prev => ({ ...prev, [category]: isExpanded }));
   };
 
-  // ★ ロジックをここに一本化
+  // ★★★ 正常だったロジックを元に再構築 ★★★
   const handleLocationSelect = (locationId) => {
-    if (!masterData?.locationsMaster || !masterData?.locationsHierarchy) {
-      console.warn('Master data is not ready.');
+    if (!masterData?.locationsHierarchy) {
+      console.warn('locationsHierarchy is not ready.');
       return;
     }
 
-    const locationInfo = masterData.locationsMaster.find(loc => loc.ロケーションID === locationId);
-    if (!locationInfo) {
-      console.warn(`Location with ID: ${locationId} not found in locationsMaster.`);
+    let foundLocation = null;
+    let parentArea = null;
+
+    // 階層データからクリックされた場所と親エリアを特定
+    for (const group of masterData.locationsHierarchy) {
+      for (const area of group.storageAreas) {
+        // まず詳細(棚など)を探す
+        const detail = area.details.find(d => d.id === locationId);
+        if (detail) {
+          foundLocation = detail;
+          parentArea = area;
+          break;
+        }
+        // 次にエリア全体(マップを持つ場所など)を探す
+        if (area.id === locationId) {
+          foundLocation = area;
+          parentArea = area; // 自分自身が親
+          break;
+        }
+      }
+      if (foundLocation) break;
+    }
+
+    if (!foundLocation) {
+      console.warn(`Location with ID: ${locationId} not found in hierarchy.`);
       return;
     }
 
-    const locationName = locationInfo.ロケーション;
     const availableMaps = ['資材室', '出荷準備室', '第二加工室', '段ボール倉庫', '発送室', '包装室'];
 
-    if (availableMaps.includes(locationName)) {
+    // クリックされたのがマップを持つエリア「そのもの」であるかを判定
+    if (foundLocation.id === parentArea.id && availableMaps.includes(parentArea.name)) {
       // マップを持つ場所の場合: マップを切り替え
-      const svgPath = `/floor-plans/${locationName}.svg`;
+      const svgPath = `/floor-plans/${parentArea.name}.svg`;
       setSelectedLocation({
         id: locationId,
-        name: locationName,
+        name: parentArea.name,
         svgPath: svgPath,
       });
-      // ダイアログは確実に閉じる
       setIsFormDialogOpen(false);
       setSelectedLocationForForm(null);
     } else {
-      // マップを持たない場所の場合: ダイアログを開く
-      // ★★★ 背景のマップは消さないように、setSelectedLocation(null) は呼び出さない ★★★
-
-      let foundLocation = null;
-      let parentArea = null;
-
-      // 階層データから商品情報などを含む詳細を探す
-      for (const group of masterData.locationsHierarchy) {
-        for (const area of group.storageAreas) {
-          if (area.id === locationId) {
-            foundLocation = area;
-            parentArea = area;
-            break;
-          }
-          const detail = area.details.find(d => d.id === locationId);
-          if (detail) {
-            foundLocation = detail;
-            parentArea = area;
-            break;
-          }
-        }
-        if (foundLocation) break;
-      }
-
-      if (foundLocation && parentArea) {
-        setSelectedLocationForForm({
-          id: locationId,
-          name: parentArea.name,
-          detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
-          products: foundLocation.products || [],
-        });
-        setIsFormDialogOpen(true);
-      } else {
-        console.log(`Hierarchy data not found for ID: ${locationId}. Opening dialog with basic info.`);
-        // 階層データが見つからなくても、最低限の情報でダイアログを開く試み
-        setSelectedLocationForForm({
-            id: locationId,
-            name: locationName, // masterから取得した名前
-            detail: '',
-            products: [], // 商品情報は不明
-        });
-        setIsFormDialogOpen(true);
-      }
+      // マップ内の詳細な場所(棚など)の場合: ダイアログを開く
+      // 背景のマップは消さない
+      setSelectedLocationForForm({
+        id: locationId,
+        name: parentArea.name,
+        detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
+        products: foundLocation.products || [],
+      });
+      setIsFormDialogOpen(true);
     }
   };
 
@@ -254,7 +241,7 @@ function LocationPage() {
                         {group.storageAreas.map((area) => (
                           <ListItemButton
                             key={area.id}
-                            onClick={() => handleStorageLocationSelectFromMenu(area.name, area.id)} // ★ 変更
+                            onClick={() => handleStorageLocationSelectFromMenu(area.name, area.id)}
                             sx={{ pl: 4 }}
                           >
                             <ListItemText 
@@ -387,7 +374,7 @@ function LocationPage() {
                         setSelectedStorageArea(e.target.value);
                         const selectedArea = locations.find(group => group.category === selectedCategory)?.storageAreas.find(area => area.name === e.target.value);
                         if (selectedArea) {
-                          handleStorageLocationSelectFromMenu(selectedArea.name, selectedArea.id); // ★ 変更
+                          handleStorageLocationSelectFromMenu(selectedArea.name, selectedArea.id);
                         }
                       }}
                       sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '.MuiSvgIcon-root': { color: 'white' } }}
