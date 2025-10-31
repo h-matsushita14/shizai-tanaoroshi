@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography, Box, List, ListItemButton, ListItemText, CircularProgress,
   Alert, Drawer, Divider, Toolbar,
@@ -22,6 +23,7 @@ const mobileDrawerWidth = 180;
 function LocationPage() {
   const { masterData, isLoadingMasterData, masterDataError, updateLocationsHierarchy, setMasterData } = useMasterData();
   const [locations, setLocations] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (masterData?.locationsHierarchy) {
@@ -218,42 +220,64 @@ function LocationPage() {
   const effectiveFixedHeaderHeight = isDesktop ? desktopFixedHeaderHeight : mobileFixedHeaderHeight;
 
   const handleAreaClickOnMap = (locationId) => {
-    if (!locations) return;
-
-    let foundLocation = null;
-    let parentAreaName = '';
-    let detailName = '';
-
-    for (const group of locations) {
-      for (const area of group.storageAreas) {
-        if (area.id === locationId) {
-          foundLocation = area;
-          parentAreaName = area.name;
-          break;
-        }
-        const detail = area.details.find(d => d.id === locationId);
-        if (detail) {
-          foundLocation = detail;
-          parentAreaName = area.name;
-          detailName = detail.name;
-          break;
-        }
-      }
-      if (foundLocation) break;
-    }
-
-    if (foundLocation) {
-      console.log('handleStorageLocationSelect: foundLocation.products', JSON.stringify(foundLocation.products, null, 2));
-      setSelectedLocationForForm({
-        id: foundLocation.id,
-        name: parentAreaName,
-        detail: detailName,
-        products: foundLocation.products || [],
-      });
-      setIsFormDialogOpen(true);
-    } else {
+    if (!masterData?.locations) return;
+  
+    const locationData = masterData.locations.find(loc => loc.id === locationId);
+    if (!locationData) {
       console.warn(`Location with ID: ${locationId} not found in master data.`);
-      // 必要であれば、ユーザーに通知する処理を追加
+      return;
+    }
+  
+    const availableMaps = ['資材室', '出荷準備室', '第二加工室', '段ボール倉庫', '発送室', '包装室'];
+    // locationData.name または locationData.location のどちらか適切な方を使用
+    const locationName = locationData.location || locationData.name; 
+  
+    if (availableMaps.includes(locationName)) {
+      // マップを持つロケーションの場合はページ遷移
+      navigate(`/location/${locationId}`);
+      // 遷移後、新しいマップを読み込むためにselectedLocationを更新
+      const svgPath = `/floor-plans/${locationName}.svg`;
+      setSelectedLocation({
+        id: locationId,
+        name: locationName,
+        svgPath: svgPath,
+      });
+    } else {
+      // マップを持たないロケーションの場合はダイアログ表示
+      let foundLocation = null;
+      let parentAreaName = '';
+      let detailName = '';
+  
+      for (const group of locations) {
+        for (const area of group.storageAreas) {
+          if (area.id === locationId) {
+            foundLocation = area;
+            parentAreaName = area.name;
+            break;
+          }
+          const detail = area.details.find(d => d.id === locationId);
+          if (detail) {
+            foundLocation = detail;
+            parentAreaName = area.name;
+            detailName = detail.name;
+            break;
+          }
+        }
+        if (foundLocation) break;
+      }
+  
+      if (foundLocation) {
+        setSelectedLocationForForm({
+          id: foundLocation.id,
+          name: parentAreaName,
+          detail: detailName,
+          products: foundLocation.products || [],
+        });
+        setIsFormDialogOpen(true);
+      } else {
+        // このelseブロックは、最初のlocationDataチェックでカバーされるため、通常は到達しない
+        console.warn(`Location with ID: ${locationId} not found in hierarchy.`);
+      }
     }
   };
 
