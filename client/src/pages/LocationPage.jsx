@@ -14,8 +14,6 @@ import InventoryFormDialog from '../components/InventoryFormDialog';
 import { sendGetRequest } from '../api/gas'; // sendGetRequestはonLocationsUpdatedで必要になるため残す
 import { useMasterData } from '../contexts/MasterDataContext'; // useMasterData をインポート
 
-// const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_API_URL; // 削除
-// console.log("GAS_WEB_APP_URL:", GAS_WEB_APP_URL); // 削除
 const drawerWidth = 240;
 const mobileDrawerWidth = 180;
 
@@ -29,10 +27,8 @@ function LocationPage() {
     }
   }, [masterData]);
 
-
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
-  const [expandedStorageAreas, setExpandedStorageAreas] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStorageArea, setSelectedStorageArea] = useState('');
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
@@ -40,46 +36,55 @@ function LocationPage() {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleCategoryChange = (category) => (event, isExpanded) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: isExpanded,
-    }));
+    setExpandedCategories(prev => ({ ...prev, [category]: isExpanded }));
   };
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  // ★ ロジックをここに一本化
+  const handleLocationSelect = (locationId) => {
+    if (!masterData?.locationsMaster || !masterData?.locationsHierarchy) {
+      console.warn('Master data is not ready.');
+      return;
+    }
 
-  const handleStorageLocationSelect = (name, id) => {
+    const locationInfo = masterData.locationsMaster.find(loc => loc.ロケーションID === locationId);
+    if (!locationInfo) {
+      console.warn(`Location with ID: ${locationId} not found in locationsMaster.`);
+      return;
+    }
+
+    const locationName = locationInfo.ロケーション;
     const availableMaps = ['資材室', '出荷準備室', '第二加工室', '段ボール倉庫', '発送室', '包装室'];
-    if (availableMaps.includes(name)) {
-      const svgPath = `/floor-plans/${name}.svg`;
+
+    if (availableMaps.includes(locationName)) {
+      // マップを持つ場所の場合: マップを切り替え
+      const svgPath = `/floor-plans/${locationName}.svg`;
       setSelectedLocation({
-        id: id,
-        name: name,
+        id: locationId,
+        name: locationName,
         svgPath: svgPath,
       });
+      // ダイアログは確実に閉じる
       setIsFormDialogOpen(false);
       setSelectedLocationForForm(null);
     } else {
-      setSelectedLocation(null);
+      // マップを持たない場所の場合: ダイアログを開く
+      // ★★★ 背景のマップは消さないように、setSelectedLocation(null) は呼び出さない ★★★
 
       let foundLocation = null;
       let parentArea = null;
 
-      for (const group of locations) {
+      // 階層データから商品情報などを含む詳細を探す
+      for (const group of masterData.locationsHierarchy) {
         for (const area of group.storageAreas) {
-          if (area.id === id) {
+          if (area.id === locationId) {
             foundLocation = area;
             parentArea = area;
             break;
           }
-          const detail = area.details.find(d => d.id === id);
+          const detail = area.details.find(d => d.id === locationId);
           if (detail) {
             foundLocation = detail;
             parentArea = area;
@@ -91,150 +96,107 @@ function LocationPage() {
 
       if (foundLocation && parentArea) {
         setSelectedLocationForForm({
-          id: id,
+          id: locationId,
           name: parentArea.name,
           detail: foundLocation.name === parentArea.name ? '' : foundLocation.name,
           products: foundLocation.products || [],
         });
         setIsFormDialogOpen(true);
       } else {
-        console.log(`No matching location found for ID: ${id}`);
-        setIsFormDialogOpen(false);
-        setSelectedLocationForForm(null);
+        console.log(`Hierarchy data not found for ID: ${locationId}. Opening dialog with basic info.`);
+        // 階層データが見つからなくても、最低限の情報でダイアログを開く試み
+        setSelectedLocationForForm({
+            id: locationId,
+            name: locationName, // masterから取得した名前
+            detail: '',
+            products: [], // 商品情報は不明
+        });
+        setIsFormDialogOpen(true);
       }
     }
   };
 
+  // マップ内クリック時の処理
+  const handleAreaClickOnMap = (locationId) => {
+    handleLocationSelect(locationId);
+  };
+
+  // サイドバーやドロップダウンからの選択処理
+  const handleStorageLocationSelectFromMenu = (name, id) => {
+    handleLocationSelect(id);
+  };
+
   useEffect(() => {
     if (!isDesktop) {
-        setSelectedStorageArea('');
-        setSelectedLocation(null);
+      setSelectedStorageArea('');
+      setSelectedLocation(null);
     }
   }, [selectedCategory, isDesktop]);
 
-  // selectedLocationForForm (棚卸ダイアログの初期データ) を更新する関数
   const handleSaveSuccess = useCallback((savedRecords) => {
-    console.log('handleSaveSuccess: savedRecords', savedRecords);
     if (!savedRecords || savedRecords.length === 0) return;
 
-    // MasterDataContext の locationsHierarchy を直接更新する
     setMasterData(prevMasterData => {
       if (!prevMasterData || !prevMasterData.locationsHierarchy) return prevMasterData;
 
-      const targetLocationId = savedRecords[0]["ロケーションID"]; // 保存されたレコードのロケーションIDを取得
-      console.log('handleSaveSuccess: targetLocationId', targetLocationId);
+      const targetLocationId = savedRecords[0]["ロケーションID"];
 
       const newLocationsHierarchy = prevMasterData.locationsHierarchy.map(group => ({
         ...group,
-                  storageAreas: group.storageAreas.map(area => {
-                    // area自体がロケーションIDを持つ場合（詳細を持たないロケーション）
-                                if (area.id === targetLocationId) {
-                                  console.log('handleSaveSuccess: Matched at area level', area.id); // ★追加
-                                  const updatedProducts = area.products.map(product => {
-                                    const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
-                                    if (savedRecord) {
-                                      return {
-                                        ...product,
-                                        棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-                                        記録日時: new Date(savedRecord.記録日時).toISOString(),
-                                      };
-                                    }
-                                    return product;
-                                  });
-                                  return { ...area, products: updatedProducts };
-                                }
-                    
-                                // detailsを持つロケーションの場合
-                                const updatedDetails = area.details.map(detail => {
-                                  if (detail.id === targetLocationId) {
-                                    console.log('handleSaveSuccess: Matched at detail level', detail.id); // ★追加
-                                    const updatedProducts = detail.products.map(product => {
-                                      const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
-                                      if (savedRecord) {
-                                        return {
-                                          ...product,
-                                          棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-                                          記録日時: new Date(savedRecord.記録日時).toISOString(),
-                                        };
-                                      }
-                                      return product;
-                                    });
-                                    return { ...detail, products: updatedProducts };
-                                  }
-                                  return detail;
-                                });                    return { ...area, details: updatedDetails };
-                  }),      }));
-      console.log('handleSaveSuccess: newLocationsHierarchy after update', JSON.stringify(newLocationsHierarchy, null, 2));
+        storageAreas: group.storageAreas.map(area => {
+          if (area.id === targetLocationId) {
+            const updatedProducts = area.products.map(product => {
+              const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+              return savedRecord ? { ...product, 棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0), 記録日時: new Date(savedRecord.記録日時).toISOString() } : product;
+            });
+            return { ...area, products: updatedProducts };
+          }
+          const updatedDetails = area.details.map(detail => {
+            if (detail.id === targetLocationId) {
+              const updatedProducts = detail.products.map(product => {
+                const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
+                return savedRecord ? { ...product, 棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0), 記録日時: new Date(savedRecord.記録日時).toISOString() } : product;
+              });
+              return { ...detail, products: updatedProducts };
+            }
+            return detail;
+          });
+          return { ...area, details: updatedDetails };
+        }),
+      }));
+
       return { ...prevMasterData, locationsHierarchy: newLocationsHierarchy };
     });
 
-    // selectedLocationForForm の products も更新して、ダイアログを再度開いたときに最新の状態を反映させる
     setSelectedLocationForForm(prev => {
       if (!prev) return null;
-
       const updatedProducts = prev.products.map(product => {
         const savedRecord = savedRecords.find(rec => rec.商品コード === product.productCode);
-        if (savedRecord) {
-          return {
-            ...product,
-            棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0),
-            記録日時: new Date(savedRecord.記録日時).toISOString(), // サーバーから返された記録日時を使用し、ISO文字列に変換
-          };
-        }
-        return product;
+        return savedRecord ? { ...product, 棚卸数量: (savedRecord.ロット数量 || 0) + (savedRecord.バラ数量 || 0), 記録日時: new Date(savedRecord.記録日時).toISOString() } : product;
       });
-      console.log('handleSaveSuccess: selectedLocationForForm after update', JSON.stringify({ ...prev, products: updatedProducts }, null, 2));
-      return {
-        ...prev,
-        products: updatedProducts,
-      };
+      return { ...prev, products: updatedProducts };
     });
-  }, [selectedLocationForForm, setMasterData]);
+  }, [setMasterData]);
 
   const handleProductListUpdated = async () => {
-    // 商品リスト更新後、MasterDataContext を更新するために、必要なデータのみをGASから再取得
     try {
-      const updatedLocationsResult = await sendGetRequest('getLocations'); // getMasterData -> getLocations
+      const updatedLocationsResult = await sendGetRequest('getLocations');
       if (updatedLocationsResult.status === 'success') {
-        updateLocationsHierarchy(updatedLocationsResult.data.locationsHierarchy); // result.data.locationsHierarchy -> result.data
-        // MasterDataContext更新後、selectedLocationForFormも更新
-        // updateSelectedLocationForForm(updatedLocationsResult.data); // result.data.locationsHierarchy -> result.data
+        updateLocationsHierarchy(updatedLocationsResult.data.locationsHierarchy);
       } else {
         throw new Error(updatedLocationsResult.message || 'ロケーションデータの再取得に失敗しました。');
       }
     } catch (err) {
       console.error('Failed to re-fetch location data after product list update:', err);
-      // エラーハンドリング
     }
   };
 
-
   const currentDrawerWidth = isMobile ? mobileDrawerWidth : drawerWidth;
-
   const appBarHeight = theme.mixins.toolbar.minHeight;
   const pageTitleBoxHeight = 57;
   const desktopFixedHeaderHeight = `calc(${appBarHeight}px + ${pageTitleBoxHeight}px)`;
   const mobileFixedHeaderHeight = `${appBarHeight}px`;
   const effectiveFixedHeaderHeight = isDesktop ? desktopFixedHeaderHeight : mobileFixedHeaderHeight;
-
-  const handleAreaClickOnMap = (locationId) => {
-    if (!masterData?.locationsMaster) {
-      console.warn('locationsMaster is not available in masterData.');
-      return;
-    }
-  
-    const locationData = masterData.locationsMaster.find(loc => loc.ロケーションID === locationId);
-  
-    if (!locationData) {
-      console.warn(`Location with ID: ${locationId} not found in locationsMaster.`);
-      return;
-    }
-  
-    const locationName = locationData.ロケーション;
-    
-    // 既存の選択処理を呼び出すことで、マップ遷移とダイアログ表示のロジックを一元化
-    handleStorageLocationSelect(locationName, locationId);
-  };
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -292,7 +254,7 @@ function LocationPage() {
                         {group.storageAreas.map((area) => (
                           <ListItemButton
                             key={area.id}
-                            onClick={() => handleStorageLocationSelect(area.name, area.id)}
+                            onClick={() => handleStorageLocationSelectFromMenu(area.name, area.id)} // ★ 変更
                             sx={{ pl: 4 }}
                           >
                             <ListItemText 
@@ -337,12 +299,11 @@ function LocationPage() {
             flexDirection: 'column',
             position: 'absolute',
             top: effectiveFixedHeaderHeight,
-            bottom: '112px', // 新しいフッターの高さ分を確保
+            bottom: '112px',
             left: 0,
             right: 0,
-            height: `calc(100vh - ${effectiveFixedHeaderHeight} - 112px)` // 高さを再計算
+            height: `calc(100vh - ${effectiveFixedHeaderHeight} - 112px)`
           }}>
-            
             <Box
               component="main"
               sx={{
@@ -375,21 +336,13 @@ function LocationPage() {
                 <Box sx={{ textAlign: 'center', mt: 4 }}>
                   {selectedCategory ? (
                     <>
-                      <Typography variant="h6" component="div" sx={{ mb: 1 }}> {/* mb を追加 */}
-                        保管場所選択
-                      </Typography>
-                      <Typography variant="h6" component="div">
-                        ▼
-                      </Typography>
+                      <Typography variant="h6" component="div" sx={{ mb: 1 }}>保管場所選択</Typography>
+                      <Typography variant="h6" component="div">▼</Typography>
                     </>
                   ) : (
                     <>
-                      <Typography variant="h6" component="div" sx={{ mb: 1 }}> {/* mb を追加 */}
-                        ロケーション選択
-                      </Typography>
-                      <Typography variant="h6" component="div">
-                        ▼
-                      </Typography>
+                      <Typography variant="h6" component="div" sx={{ mb: 1 }}>ロケーション選択</Typography>
+                      <Typography variant="h6" component="div">▼</Typography>
                     </>
                   )}
                 </Box>
@@ -398,59 +351,31 @@ function LocationPage() {
           </Box>
 
           <AppBar position="fixed" color="primary" sx={{ top: 'auto', bottom: 0 }}>
-            <Toolbar sx={{ flexDirection: 'column', alignItems: 'stretch', pt: 2 }}> {/* 2行構成にするためflexDirection: 'column' */}
-              {/* 上の行: カテゴリ選択ボタン */}
+            <Toolbar sx={{ flexDirection: 'column', alignItems: 'stretch', pt: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-around', overflowX: 'auto', position: 'relative', width: '100%', mb: 1 }}>
                 {locations.map((group) => (
                   <Button
                     key={group.category}
                     color="inherit"
-                    onClick={() => {
-                      setSelectedCategory(group.category);
-                    }}
+                    onClick={() => setSelectedCategory(group.category)}
                     sx={{
                       flexShrink: 0,
                       fontWeight: selectedCategory === group.category ? 'bold' : 'normal',
-                      // borderBottom: selectedCategory === group.category ? '2px solid white' : 'none', // 削除
                       position: 'relative',
                     }}
                   >
                     {group.category}
-                    {selectedCategory === group.category && ( // 復活
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: -15,
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          color: 'white',
-                          fontSize: '1.5rem',
-                          lineHeight: 1,
-                        }}
-                      >
-                        ▼
-                      </Box>
+                    {selectedCategory === group.category && (
+                      <Box sx={{ position: 'absolute', top: -15, left: '50%', transform: 'translateX(-50%)', color: 'white', fontSize: '1.5rem', lineHeight: 1 }}>▼</Box>
                     )}
                   </Button>
                 ))}
               </Box>
 
-              {/* 下の行: 保管場所選択欄 */}
               {selectedCategory && (
                 <Box sx={{ flexShrink: 0, zIndex: 1, width: '100%', px: 2 }}>
                   <FormControl fullWidth>
-                    <InputLabel
-                      id="storage-area-select-label"
-                      sx={{
-                        color: 'white',
-                        '&.Mui-focused': {
-                          color: 'white', // フォーカス時のラベル色
-                        },
-                        '&.Mui-active': {
-                          color: 'white', // アクティブ時のラベル色
-                        },
-                      }}
-                    >
+                    <InputLabel id="storage-area-select-label" sx={{ color: 'white', '&.Mui-focused': { color: 'white' }, '&.Mui-active': { color: 'white' } }}>
                       保管場所
                     </InputLabel>
                     <Select
@@ -460,41 +385,21 @@ function LocationPage() {
                       label="保管場所"
                       onChange={(e) => {
                         setSelectedStorageArea(e.target.value);
-                        const selectedArea = locations
-                          .find(group => group.category === selectedCategory)?.storageAreas
-                          .find(area => area.name === e.target.value);
-                      if (selectedArea) {
-                        handleStorageLocationSelect(selectedArea.name, selectedArea.id);
-                      }
+                        const selectedArea = locations.find(group => group.category === selectedCategory)?.storageAreas.find(area => area.name === e.target.value);
+                        if (selectedArea) {
+                          handleStorageLocationSelectFromMenu(selectedArea.name, selectedArea.id); // ★ 変更
+                        }
                       }}
-                      sx={{
-                        color: 'white',
-                        '.MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'white',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': { // ホバー時の枠線
-                          borderColor: 'white',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { // フォーカス時の枠線
-                          borderColor: 'white',
-                        },
-                        '.MuiSvgIcon-root': {
-                          color: 'white',
-                        },
-                      }}
+                      sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }, '.MuiSvgIcon-root': { color: 'white' } }}
                     >
-                      <MenuItem value="">
-                        <em>選択してください</em>
-                      </MenuItem>
-                      {locations
-                        .find(group => group.category === selectedCategory)?.storageAreas
-                        .map((area) => (
-                          <MenuItem key={area.id} value={area.name}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                              <Typography>{area.name}</Typography>
-                            </Box>
-                          </MenuItem>
-                        ))}
+                      <MenuItem value=""><em>選択してください</em></MenuItem>
+                      {locations.find(group => group.category === selectedCategory)?.storageAreas.map((area) => (
+                        <MenuItem key={area.id} value={area.name}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                            <Typography>{area.name}</Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Box>
@@ -514,9 +419,9 @@ function LocationPage() {
           locationId={selectedLocationForForm.id}
           locationName={selectedLocationForForm.name}
           locationDetail={selectedLocationForForm.detail}
-          initialProducts={selectedLocationForForm.products} // 製品情報を追加
+          initialProducts={selectedLocationForForm.products}
           onSaveSuccess={handleSaveSuccess}
-          onProductListUpdated={handleProductListUpdated} // 追加
+          onProductListUpdated={handleProductListUpdated}
         />
       )}
     </Box>
